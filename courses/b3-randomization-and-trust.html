@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 3 · Randomization and trust - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 3 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 3 of 10</div>
+    <h1>Randomization and trust, <span class="accent">or the plumbing that makes a result believable</span></h1>
+    <p class="sub">A well-powered test is worthless if the randomization is broken. Session 3 is about the machinery that protects internal validity: pick the right unit to randomize, respect SUTVA, stratify so the arms start balanced, prove the pipeline with an A/A test, and catch a sample ratio mismatch before you read a single metric. Every check here is a few lines of numpy and scipy on Lumen data - and each one has stopped a real experiment from lying to a real team.</p>
+    <div class="chip-row">
+      <span class="chip level">🟡 Core</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · numpy / scipy</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-16 · The four safeguards</span>
+      <span class="a3" style="flex:5">16-40 · Build the guards in Python</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>Why a "significant" result can still be garbage</h2>
+    </div>
+    <p class="lede">In b1 randomization rescued a clean answer; in b2 you sized the test. But between the design and the dashboard sits a pile of plumbing that quietly decides whether your randomization actually held. Did you split by user or by session? Did one arm accidentally get 52% of the traffic? Does the pipeline even produce honest p-values when there is truly nothing to find? Session 3 makes each of these a runnable check on Lumen's assignment log, so that when a test does come back significant, you have earned the right to believe it.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      Three guards you can drop into any experiment pipeline: (1) a stratified assignment routine in numpy that balances arms by device, (2) an A/A test harness that proves your pipeline emits uniform p-values and ~5% false positives - exactly alpha, working as designed, and (3) an SRM check with <code>scipy.stats.chisquare</code> that halts analysis when allocation drifts from intended. Run these before you read a metric, every single time.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: UNIT OF RANDOMIZATION + SUTVA ============ -->
+  <section class="section" id="unit-and-sutva">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · what you randomize</span>
+      <h2>Randomize the unit you analyze <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">The single most common validity bug is randomizing by the wrong unit. If you analyze results per user but assign per session, the <em>same</em> person can land in both arms across visits - contaminating the comparison and breaking the independence your test assumes. The rule is blunt: <strong>randomize by the unit you analyze by.</strong> For a checkout-conversion test where a shopper visits several times, that unit is the user, not the session.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left: session-level splitting sends the same user into both arms. Right: user-level splitting keeps each user in one arm.">
+        <style>
+          .urT { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+          .urL { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .urN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .urArr { stroke: #6366F1; stroke-width: 2.5; fill: none; marker-end: url(#urAh); }
+          .urBad { stroke: #DC2626; stroke-width: 2.5; fill: none; marker-end: url(#urAhBad); }
+        </style>
+        <defs>
+          <marker id="urAh" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#6366F1" stroke-width="1.6"/></marker>
+          <marker id="urAhBad" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#DC2626" stroke-width="1.6"/></marker>
+        </defs>
+        <!-- LEFT: session-level (broken) -->
+        <text class="urL" x="30" y="34">Split by session (leaks)</text>
+        <rect x="30" y="56" width="150" height="40" rx="10" fill="#6B6785"/><text class="urT" x="52" y="81">User: Mia</text>
+        <rect x="30" y="120" width="120" height="30" rx="8" fill="#E7E5F2"/><text class="urN" x="46" y="140" style="fill:#1E1B3A">visit 1</text>
+        <rect x="30" y="164" width="120" height="30" rx="8" fill="#E7E5F2"/><text class="urN" x="46" y="184" style="fill:#1E1B3A">visit 2</text>
+        <rect x="240" y="112" width="140" height="40" rx="10" fill="#4F46E5"/><text class="urT" x="262" y="137">Variant arm</text>
+        <rect x="240" y="176" width="140" height="40" rx="10" fill="#3730A3"/><text class="urT" x="262" y="201">Control arm</text>
+        <path class="urBad" d="M150,135 L236,132"/>
+        <path class="urBad" d="M150,179 L236,196"/>
+        <text class="urN" x="30" y="240" style="fill:#DC2626">same user in BOTH arms - comparison contaminated</text>
+        <!-- RIGHT: user-level (clean) -->
+        <text class="urL" x="490" y="34">Split by user (clean)</text>
+        <rect x="490" y="56" width="150" height="40" rx="10" fill="#6B6785"/><text class="urT" x="512" y="81">User: Mia</text>
+        <rect x="490" y="120" width="120" height="30" rx="8" fill="#E7E5F2"/><text class="urN" x="506" y="140" style="fill:#1E1B3A">visit 1</text>
+        <rect x="490" y="164" width="120" height="30" rx="8" fill="#E7E5F2"/><text class="urN" x="506" y="184" style="fill:#1E1B3A">visit 2</text>
+        <rect x="700" y="142" width="150" height="40" rx="10" fill="#4F46E5"/><text class="urT" x="722" y="167">Variant arm</text>
+        <path class="urArr" d="M610,135 C660,150 680,158 696,160"/>
+        <path class="urArr" d="M610,179 C660,172 680,166 696,164"/>
+        <rect x="670" y="98" width="80" height="26" rx="8" fill="#84CC16"/><text class="urL" x="682" y="116">🔒 sticky</text>
+        <text class="urN" x="490" y="240" style="fill:#1E1B3A">user pinned to one arm across all visits</text>
+        <!-- note squares -->
+        <rect x="30" y="278" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="urN" x="52" y="289" style="fill:#1E1B3A">Hash the user id to a bucket so assignment is deterministic and sticky - the same id always lands in the same arm.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - session-level splitting leaks a user into both arms; user-level splitting pins them</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>SUTVA - the assumption that quietly breaks<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p><strong>SUTVA</strong> (stable unit treatment value assumption, Rubin 1980) has two halves, and both matter for online tests:</p>
+        <ul>
+          <li><strong>No interference</strong> - one unit's treatment does not affect another unit's outcome. Referral features, shared inventory, and social feeds break this: a treated user can change an untreated user's behavior.</li>
+          <li><strong>No hidden versions</strong> - "the treatment" is one well-defined thing. If the new layout renders differently on old browsers, you are secretly running several treatments and averaging them.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen tests a "refer a friend" banner. Treated users invite control users, whose conversion then rises - so the control arm is no longer a clean counterfactual, and the measured effect is diluted. When interference is structural, you switch to cluster randomization (assign whole regions or social clusters) rather than individual users. We build the geo version of this in b8.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>Internal vs external validity - two different jobs<span class="mini">2 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Keep two ideas separate. <strong>Randomization</strong> (how you assign the units you have) buys <em>internal validity</em> - the effect you measure is caused by the treatment, not by confounding. <strong>Random sampling</strong> (how you drew the units from the population) buys <em>external validity</em> - the effect generalizes beyond your sample. An A/B test on logged-in Lumen shoppers can be internally airtight and still not generalize to first-time anonymous visitors. Both matter; they are not the same guarantee.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: STRATIFY, A/A, SRM ============ -->
+  <section class="section" id="three-checks">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the three guards</span>
+      <h2>Stratify, prove, and monitor <span class="tag concept">4 min live</span></h2>
+    </div>
+    <p class="lede">Plain randomization balances arms <em>in expectation</em>, but any single draw can still be lopsided on an important covariate. Three practices tighten the guarantee: <strong>stratified (block) randomization</strong> balances within each stratum so arms match on device from the start; the <strong>A/A test</strong> proves your whole pipeline is honest before you trust an A/B; and the <strong>SRM check</strong> watches the allocation itself for drift while the test runs.</p>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Why SRM alarms at p &lt; 0.001, not 0.05<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A <strong>sample ratio mismatch</strong> is when the observed split deviates from what you intended (a 50/50 design that lands 52/48 on large N). It is a symptom, not a metric - a signal that assignment, logging, or filtering is broken, so the arms are no longer comparable and no downstream result can be trusted.</p>
+        <ul>
+          <li>Test it with a <strong>chi-square goodness-of-fit</strong> against the intended ratio.</li>
+          <li>The alarm threshold is <strong>~p &lt; 0.001</strong>, deliberately far stricter than the 0.05 you would use for a metric - SRM is a rare-but-catastrophic bug, and you do not want a false alarm every twentieth healthy test.</li>
+          <li>When SRM fires: <strong>stop, do not read the results, and debug the pipeline.</strong> Common causes are a redirect that drops one arm, a bot filter applied unevenly, or a broken hash bucket.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>What a clean A/A test looks like<span class="mini">2 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>An <strong>A/A test</strong> runs two identical arms - no real difference - through the exact pipeline you will use for the A/B. If the plumbing is honest, the p-values across many repeats are <em>uniformly</em> distributed on 0 to 1, and about <strong>5% fall below 0.05</strong> purely by chance. That 5% is not a bug - it is alpha doing exactly its job. If instead 15% come back "significant", or the p-values pile up near zero, your pipeline has a leak (often a randomization or logging fault) and any A/B built on it is suspect.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Assign 20,000 users, then stratify by device <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Start with plain random assignment of 20,000 Lumen users in numpy, then upgrade to stratified randomization so the arms balance on device (mobile / desktop / tablet). Verify the balance both ways so you can feel what stratification buys.</p>
+    <div class="steps">
+      <div class="step"><p>Build the user frame with a device mix, then do a plain coin-flip assignment:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_assign.py</span>
+<pre>import numpy as np, pandas as pd
+rng = np.random.default_rng(7)
+
+N = 20_000
+device = rng.choice(["mobile", "desktop", "tablet"],
+                    size=N, p=[0.62, 0.30, 0.08])
+users = pd.DataFrame({"user_id": np.arange(N), "device": device})
+
+# plain randomization: independent coin flip per user
+users["arm_plain"] = np.where(rng.random(N) &lt; 0.5, "variant", "control")</pre>
+        </div>
+      </div>
+      <div class="step"><p>Now stratify: split <em>within</em> each device group so the arms match on device by construction:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_stratify.py</span>
+<pre>def stratified_assign(frame, strat_col, p=0.5, seed=7):
+    rng = np.random.default_rng(seed)
+    arm = np.empty(len(frame), dtype=object)
+    for _, idx in frame.groupby(strat_col).groups.items():
+        idx = np.array(idx)
+        rng.shuffle(idx)                      # shuffle within stratum
+        cut = int(round(len(idx) * p))
+        arm[idx[:cut]] = "variant"
+        arm[idx[cut:]] = "control"
+    return arm
+
+users["arm_strat"] = stratified_assign(users, "device")</pre>
+        </div>
+      </div>
+      <div class="step"><p>Verify balance. Compare the device mix across arms under each scheme - stratification pins it near-perfectly:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_check_balance.py</span>
+<pre>for col in ["arm_plain", "arm_strat"]:
+    tab = (users.groupby(col)["device"]
+                .value_counts(normalize=True)
+                .unstack().round(3))
+    print(col, "\n", tab, "\n")
+# arm_plain: device shares wobble a little between arms
+# arm_strat: device shares are essentially identical across arms</pre>
+        </div>
+      </div>
+    </div>
+    <div class="callout tip">
+      <strong>Stratify on what predicts the outcome</strong>
+      Stratification only helps when the covariate is related to conversion. Device is a fair bet for Lumen (mobile converts differently). Stratifying on a variable unrelated to the outcome costs complexity and buys nothing - pick your strata deliberately.
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Run an A/A test and read the p-value histogram <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Prove the pipeline is honest. Simulate two arms with the <em>same</em> true rate (3.2%), run the two-proportion test many times, and confirm the p-values are ~uniform and ~5% land below 0.05. That 5% is alpha, working exactly as designed.</p>
+    <div class="steps">
+      <div class="step"><p>Write one A/A trial: draw both arms from the same rate, run a two-proportion z-test, return the p-value:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_aa_trial.py</span>
+<pre>import numpy as np
+from statsmodels.stats.proportion import proportions_ztest
+
+rng = np.random.default_rng(0)
+BASE = 0.032          # identical rate in BOTH arms - no real effect
+N_ARM = 20_000
+
+def aa_trial():
+    a = rng.random(N_ARM) &lt; BASE     # arm A conversions
+    b = rng.random(N_ARM) &lt; BASE     # arm B conversions, same rate
+    count = np.array([a.sum(), b.sum()])
+    nobs  = np.array([N_ARM, N_ARM])
+    _, p = proportions_ztest(count, nobs)
+    return p</pre>
+        </div>
+      </div>
+      <div class="step"><p>Repeat it thousands of times and measure the false-positive rate - it should sit right around alpha:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_aa_run.py</span>
+<pre>pvals = np.array([aa_trial() for _ in range(5_000)])
+false_pos = (pvals &lt; 0.05).mean()
+print(f"share of p &lt; 0.05 = {false_pos:.3f}")   # ~0.05, as designed</pre>
+        </div>
+      </div>
+      <div class="step"><p>Plot the histogram - a flat bar chart is the signature of a healthy pipeline:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_aa_plot.py</span>
+<pre>import matplotlib.pyplot as plt
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.hist(pvals, bins=20, range=(0, 1), color="#4F46E5", edgecolor="white")
+ax.axhline(len(pvals) / 20, color="#84CC16", linestyle="--",
+           label="uniform expectation")
+ax.set_xlabel("p-value under A/A (no true effect)")
+ax.set_ylabel("count")
+ax.set_title("A/A p-values are ~uniform - the pipeline is honest")
+ax.legend(); fig.tight_layout()
+# a flat histogram = trustworthy plumbing; a spike near 0 = a leak</pre>
+        </div>
+      </div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>Teams run a scheduled A/A on live traffic every quarter. If it ever comes back with 12% of metrics "significant", someone changed the assignment service, a caching layer, or a logging join - and every A/B since is suspect. The A/A is the smoke detector you hope never goes off.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>Catch a sample ratio mismatch with chi-square <span class="tag demo">★ 6 min · everyone</span></h2>
+    </div>
+    <p class="lede">The last guard. Feed the canonical Lumen SRM example - 20,000 assignments landing 10,420 / 9,580 - to a chi-square goodness-of-fit test, watch the p-value collapse toward zero, and compare it to a clean 50/50. Then write the guard that halts analysis when SRM fires.</p>
+    <div class="steps">
+      <div class="step"><p>Run the chi-square test against the intended 50/50 split for both a broken and a clean allocation:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_srm_check.py</span>
+<pre>import numpy as np
+from scipy.stats import chisquare
+
+def srm_pvalue(observed, expected_ratio=(0.5, 0.5)):
+    observed = np.array(observed, dtype=float)
+    total = observed.sum()
+    expected = total * np.array(expected_ratio)
+    # goodness-of-fit: observed counts vs intended split
+    _, p = chisquare(f_obs=observed, f_exp=expected)
+    return p
+
+srm   = srm_pvalue([10_420, 9_580])   # the canon broken split
+clean = srm_pvalue([10_005, 9_995])   # a healthy 50/50
+print(f"SRM example p = {srm:.2e}")   # ~1e-8, catastrophic
+print(f"clean split p = {clean:.3f}") # large, no problem</pre>
+        </div>
+      </div>
+      <div class="step"><p>Wrap it in a guard that stops the analysis before anyone reads a metric - alarm at the strict p &lt; 0.001:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_guard.py</span>
+<pre>SRM_ALARM = 1e-3   # strict, NOT 0.05 - SRM is rare but catastrophic
+
+def guard_or_stop(observed):
+    p = srm_pvalue(observed)
+    if p &lt; SRM_ALARM:
+        raise RuntimeError(
+            f"SRM detected (p={p:.2e}). Split is {observed}, "
+            "expected ~50/50. STOP - debug the pipeline, "
+            "do not read the results.")
+    print(f"allocation OK (p={p:.3f}) - safe to analyze")
+
+guard_or_stop([10_005, 9_995])   # passes
+guard_or_stop([10_420, 9_580])   # raises -> analysis halts</pre>
+        </div>
+      </div>
+      <div class="step"><p>Wire <code>guard_or_stop</code> as the first line of your analysis script. A test with SRM is not a weaker result - it is a <em>non-result</em>. Reading its conversion lift is like trusting a scale you know is miscalibrated.</p></div>
+    </div>
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Intended fifty-fifty allocation shown as two equal bars, versus an observed lopsided allocation with a red stop flag and the chi-square verdict">
+        <style>
+          .srB { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+          .srL { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .srN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <!-- LEFT: intended 50/50 -->
+        <text class="srL" x="30" y="34">Intended split (50/50)</text>
+        <rect x="40" y="60" width="150" height="150" rx="8" fill="#6366F1"/><text class="srB" x="78" y="140">control</text><text class="srB" x="82" y="160">10,000</text>
+        <rect x="210" y="60" width="150" height="150" rx="8" fill="#4F46E5"/><text class="srB" x="248" y="140">variant</text><text class="srB" x="252" y="160">10,000</text>
+        <text class="srN" x="40" y="238" style="fill:#4a6b0a">chi-square p large - allocation healthy, proceed</text>
+        <!-- RIGHT: observed lopsided -->
+        <text class="srL" x="500" y="34">Observed split (SRM)</text>
+        <rect x="510" y="40" width="150" height="170" rx="8" fill="#3730A3"/><text class="srB" x="548" y="130">control</text><text class="srB" x="552" y="150">10,420</text>
+        <rect x="680" y="82" width="150" height="128" rx="8" fill="#A5B4FC"/><text class="srL" x="716" y="140">variant</text><text class="srL" x="720" y="160">9,580</text>
+        <rect x="590" y="52" width="120" height="30" rx="8" fill="#DC2626"/><text class="srB" x="612" y="72">🚩 STOP</text>
+        <text class="srN" x="500" y="238" style="fill:#DC2626">chi-square p ≈ 1e-8 &lt; 0.001 - SRM, do not read results</text>
+        <!-- note squares -->
+        <rect x="40" y="278" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="srN" x="62" y="289" style="fill:#1E1B3A">A 4.2-point gap on 20,000 units is astronomically unlikely under a true 50/50 - the split itself is the bug report.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - intended 50/50 vs an observed SRM split, with the chi-square verdict</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 4</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Add a novelty-effect check.</strong> Split the A/A (or a real A/B) outcome by day-since-start and plot the arm difference over time. A gap that shrinks as the days pass is a novelty / primacy signal, not a durable effect - decide how long to run before you trust the number.</li>
+      <li><strong>Stratify by a second covariate.</strong> Extend <code>stratified_assign</code> to block on device <em>and</em> new-vs-returning at once (cross the strata), and confirm both stay balanced across arms.</li>
+      <li><strong>Break your own pipeline.</strong> Introduce a bug - drop 4% of one arm's rows before the test - then confirm your A/A false-positive rate climbs and your SRM guard fires. Feel both alarms trip.</li>
+      <li><strong>Optional:</strong> extend the SRM guard to a 3-arm test (e.g. 34/33/33 intended) and check the chi-square degrees of freedom update correctly.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · You analyze conversion per user but assign treatment per session. The core problem is...</p>
+      <button class="qopt" type="button">A · the test will simply be underpowered</button>
+      <button class="qopt" type="button">B · the same user can appear in both arms across visits, contaminating the comparison</button>
+      <button class="qopt" type="button">C · sessions are harder to log than users</button>
+      <p class="qwhy">Randomize by the unit you analyze by. Session-level assignment lets one user land in both arms across visits, breaking independence and mixing the arms. For a user-level metric, assign per user with a sticky hash.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · A clean A/A test on your pipeline should produce...</p>
+      <button class="qopt" type="button">A · p-values all clustered near zero</button>
+      <button class="qopt" type="button">B · exactly zero significant results, always</button>
+      <button class="qopt" type="button">C · uniform p-values, with about 5% below 0.05 by chance</button>
+      <p class="qwhy">With no true effect, an honest pipeline emits uniform p-values, so ~5% fall under 0.05 - that is alpha working as designed. A spike near zero or a much higher rate means the plumbing has a leak.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · Your 50/50 test logged 10,420 / 9,580 and the chi-square p is ~1e-8. You should...</p>
+      <button class="qopt" type="button">A · stop, treat it as a non-result, and debug the pipeline - do not read the metrics</button>
+      <button class="qopt" type="button">B · proceed, since p &lt; 0.001 means the result is very significant</button>
+      <button class="qopt" type="button">C · rerun the same data with a larger alpha</button>
+      <p class="qwhy">That is a sample ratio mismatch. A p below the ~0.001 alarm threshold means allocation deviated from intended, so the arms are not comparable and no downstream metric can be trusted. Stop and fix the assignment or logging.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">Validity threats and trust checks are scattered across the A/B and design courses; we build the working guards here and point to the sources for the fuller taxonomy.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Unit of randomization + SUTVA (interference, hidden versions)</span><span class="note">Part 1 + the user-vs-session figure</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Stratified / block randomization</span><span class="note">build-along 1 (numpy, balance by device)</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">A/A test + SRM chi-square (alarm ~p &lt; 0.001)</span><span class="note">build-alongs 2-3, canon 10,420 / 9,580 example</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Udemy - Ultimate AB Testing (Dan Lee)</span><span class="note">full SRM / SUTVA / novelty validity-threat taxonomy</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">LinkedIn - Data Science of Experimental Design (Wahi)</span><span class="note">design + SRM at concept level - videos on platform</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Kohavi et al. - Trustworthy Online Controlled Experiments</span><span class="note">the definitive treatment of trust and pitfalls</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 3 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Unit of randomization</b><span>Randomize by the unit you analyze by. User-level metric → assign per user with a sticky hash, never per session.</span></div>
+      <div class="cheat-item"><b>SUTVA</b><span>No interference (one unit's treatment can't affect another's outcome) + no hidden treatment versions. Referrals and shared feeds break it.</span></div>
+      <div class="cheat-item"><b>Stratified randomization</b><span>Split within strata (e.g. device) so arms balance from the start. Only stratify on covariates tied to the outcome.</span></div>
+      <div class="cheat-item"><b>A/A test</b><span>Two identical arms through the real pipeline → uniform p-values, ~5% below 0.05. That 5% is alpha, not a bug.</span></div>
+      <div class="cheat-item"><b>SRM check</b><span>chi-square goodness-of-fit vs intended split. Alarm at ~p &lt; 0.001 (not 0.05). Canon: 10,420 / 9,580 → p ≈ 1e-8.</span></div>
+      <div class="cheat-item"><b>On SRM: STOP</b><span>SRM makes the arms non-comparable. It is a non-result - do not read metrics, debug assignment / logging / filters first.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 3 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b2-power-and-sample-size.html">← Prev: Power and sample size</a> &nbsp;·&nbsp; <a href="b4-run-an-ab-test.html">Next: Run and analyze an A/B test →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

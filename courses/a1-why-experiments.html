@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leader session 1 · Why experiments beat opinions - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Leader session 1 of 6</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Leader session 1 of 6</div>
+    <h1>Why experiments beat opinions, <span class="accent">and dashboards</span></h1>
+    <p class="sub">You do not need to run a test to lead a team that runs great tests. You need to know what a real experiment buys you that a strong opinion and a rising chart do not: a defensible answer to "did this actually cause the result?" This session gives you the one idea underneath the whole discipline - the counterfactual - and a clear rule for when a decision is worth an experiment at all. No math, no code. This is your ▶ start button for the leader track.</p>
+    <div class="chip-row">
+      <span class="chip level">🟢 Start here</span>
+      <span class="chip audience">Leaders · C-level / PM / marketing</span>
+      <span class="chip audience">No code</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:4">3-22 · The counterfactual</span>
+      <span class="a3" style="flex:4">22-40 · When to commission</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The most expensive sentence in business</h2>
+    </div>
+    <p class="lede">"We shipped it, and the numbers went up, so it worked." That sentence has justified more bad budget decisions than any spreadsheet error. It sounds like evidence. It is a story - one that quietly assumes the numbers would have stayed flat if you had done nothing. This session is about the missing half of that sentence: the world where you <em>did not</em> ship it. Get comfortable with that missing world - the counterfactual - and you can tell a genuine result from a lucky one, and know which decisions deserve the cost of a real test.</p>
+    <div class="legend">
+      <span class="pill solid">Live - covered in session</span>
+      <span class="pill light">Self-study - read after</span>
+      <span class="pill amber">★ The one big idea</span>
+      <span class="pill inkpill">The case: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A leader's working model of causation: what "it caused the lift" actually claims, why correlation and before/after charts routinely fool smart people, and a one-page rule for deciding when a decision is big or reversible enough to be worth an experiment - and when it plainly is not. You will be able to sit in a results review and ask the two or three questions that separate a real win from a mirage.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: THE COUNTERFACTUAL ============ -->
+  <section class="section" id="counterfactual">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the one big idea</span>
+      <h2>Causation is a comparison to a world you cannot see <span class="tag concept">8 min live</span></h2>
+    </div>
+    <p class="lede">When Lumen's team says the new product page "caused" a lift, they are making a claim about two worlds: the one where these shoppers saw the new page, and the one where the very same shoppers, same day, saw the old one. Only one of those worlds ever happens. The gap between them is the true effect - and the entire craft of experimentation is a set of honest tricks for estimating a world you never got to observe.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left: a before-after comparison confuses the trend with the effect. Right: an A/B test compares two groups at the same time to isolate the effect.">
+        <style>
+          .cfT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .cfL { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .cfN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .cfA { stroke: #C7C4DE; stroke-width: 2.5; fill: none; marker-end: url(#cfAh); }
+        </style>
+        <defs>
+          <marker id="cfAh" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#C7C4DE" stroke-width="1.6"/></marker>
+        </defs>
+        <!-- LEFT before/after -->
+        <text class="cfL" x="30" y="34">The tempting story: before → after</text>
+        <rect x="30" y="54" width="150" height="60" rx="12" fill="#6B6785"/>
+        <text class="cfT" x="52" y="82">Last month</text><text class="cfT" x="52" y="102">3.2% convert</text>
+        <rect x="250" y="54" width="150" height="60" rx="12" fill="#4F46E5"/>
+        <text class="cfT" x="272" y="82">This month</text><text class="cfT" x="272" y="102">3.6% convert</text>
+        <line class="cfA" x1="180" y1="84" x2="248" y2="84"/>
+        <text class="cfN" x="30" y="140" style="fill:#DC2626">"+0.4pt, it worked!" - but a promo, payday, and</text>
+        <text class="cfN" x="30" y="158" style="fill:#DC2626">the season all changed too. The trend is not the effect.</text>
+        <!-- RIGHT A/B -->
+        <text class="cfL" x="480" y="34">The honest test: same time, split traffic</text>
+        <rect x="480" y="54" width="150" height="60" rx="12" fill="#6366F1"/>
+        <text class="cfT" x="502" y="82">Control (old)</text><text class="cfT" x="502" y="102">3.2% convert</text>
+        <rect x="700" y="54" width="160" height="60" rx="12" fill="#3730A3"/>
+        <text class="cfT" x="722" y="82">Variant (new)</text><text class="cfT" x="722" y="102">3.6% convert</text>
+        <rect x="620" y="128" width="60" height="26" rx="8" fill="#84CC16"/><text class="cfL" x="632" y="146">🎲</text>
+        <text class="cfN" x="480" y="176" style="fill:#4F46E5">Same shoppers, same day, split by coin flip. The only</text>
+        <text class="cfN" x="480" y="194" style="fill:#4F46E5">difference is the page - so the gap IS the effect.</text>
+        <!-- shared bottom band -->
+        <rect x="30" y="222" width="830" height="42" rx="10" fill="#EEF2FF"/>
+        <text class="cfN" x="46" y="240" style="fill:#1E1B3A">The control group is your window into the counterfactual: it is "these kinds of shoppers, this week, without the change."</text>
+        <text class="cfN" x="46" y="257" style="fill:#1E1B3A">Before/after has no control group, so it cannot separate what you did from everything else that moved.</text>
+        <rect x="30" y="282" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="cfN" x="52" y="293" style="fill:#1E1B3A">A rising chart after a launch is not proof. Proof needs a comparable group that did not get the change.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - before/after tells a story; a control group estimates the counterfactual</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Correlation, causation, and the confounder<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Ice-cream sales and drowning rise together. Neither causes the other - summer heat drives both. That hidden common cause is a <strong>confounder</strong>, and it is why "X and Y move together" almost never means "X causes Y".</p>
+        <ul>
+          <li><strong>Correlation</strong> - two things move together. Cheap, everywhere, often coincidental.</li>
+          <li><strong>Causation</strong> - changing one changes the other. Expensive to prove, and the only thing worth betting budget on.</li>
+          <li><strong>Confounder</strong> - a third factor driving both, manufacturing a correlation with no causal link.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen finds its email subscribers convert three times better than non-subscribers and nearly doubles the email budget. But subscribers <em>chose</em> to subscribe - they were already high-intent fans. The 3x is mostly who they are, not what email did. Engagement is the confounder. A holdout test later showed email's true incremental lift was a fraction of that. This is the single most common way marketing budgets get misallocated.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>Why smart, honest people still get fooled<span class="mini">4 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>It is not stupidity - it is that the wrong methods feel exactly as convincing as the right ones. Three traps catch everyone:</p>
+        <ul>
+          <li><strong>The trend trap</strong> - attributing a seasonal or promo-driven rise to your change (the before/after picture above).</li>
+          <li><strong>The self-selection trap</strong> - comparing people who opted in to people who did not (the email story).</li>
+          <li><strong>The peeking trap</strong> - watching a live test daily and declaring victory the first day it looks good. The tool below shows how badly this one lies - and it feels like diligence, not error.</li>
+        </ul>
+        <p>You do not need to run the statistics to defend against these. You need to recognize the shape of each and ask for the control group, the randomization, and the pre-committed stopping point.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PLAYGROUND ============ -->
+  <section class="section" id="playground">
+    <div class="section-kicker">
+      <span class="klabel">See the peeking trap for yourself</span>
+      <h2>Watching a test every day manufactures false wins <span class="tag concept">try it</span></h2>
+    </div>
+    <p class="lede">Here is a test where the two versions are genuinely identical - there is no real difference at all. Run it once checking only at the end, then run it checking every day and stopping the first time it looks significant. The "checking every day" version declares a false winner far more than the honest 5% of the time. Nobody lied; they just looked too often. This is why a good experimentation culture pre-commits to a stopping point.</p>
+    <div class="exp-live" data-tool="peeking" data-base="3.2" data-nfinal="32000" data-runs="400"></div>
+  </section>
+
+  <!-- ============ PART 2: WHEN TO COMMISSION ============ -->
+  <section class="section" id="when-to-commission">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the leader's judgement</span>
+      <h2>When is a decision worth an experiment? <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">Experiments cost traffic, time, and focus. Not every decision earns one. Your job as a leader is not to test everything - it is to spend your experimentation budget where the stakes and the uncertainty are both high, and to move fast on the rest. Here is the map.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A 2x2 of decision stakes versus reversibility, showing when to experiment, when to just ship, and when to use a smaller test.">
+        <style>
+          .wcL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .wcT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .wcS { font: 600 11px Inter, sans-serif; fill: #FFFFFF; opacity:.95; }
+          .wcAx { font: 700 12px Inter, sans-serif; fill: #6B6785; }
+          .wcN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <!-- axes -->
+        <text class="wcAx" x="40" y="30" transform="rotate(-90 40 30)"></text>
+        <text class="wcAx" x="14" y="120" transform="rotate(-90 14 120)">high stakes / costly to undo →</text>
+        <text class="wcAx" x="330" y="332">low uncertainty → high uncertainty</text>
+        <!-- quadrants -->
+        <rect x="70" y="40" width="380" height="120" rx="12" fill="#A5B4FC"/>
+        <text class="wcL" x="90" y="76">Just ship it</text>
+        <text class="wcN" x="90" y="98" style="fill:#1E1B3A">Low stakes, easy to reverse, you are fairly</text>
+        <text class="wcN" x="90" y="115" style="fill:#1E1B3A">sure. Copy tweak, button colour. Testing</text>
+        <text class="wcN" x="90" y="132" style="fill:#1E1B3A">costs more than being wrong. Move.</text>
+        <rect x="460" y="40" width="380" height="120" rx="12" fill="#6366F1"/>
+        <text class="wcT" x="480" y="76">Run a quick test</text>
+        <text class="wcS" x="480" y="98">Low stakes but you honestly do not know.</text>
+        <text class="wcS" x="480" y="115">A light A/B settles it cheaply and builds</text>
+        <text class="wcS" x="480" y="132">the habit. Bias toward testing here.</text>
+        <rect x="70" y="170" width="380" height="130" rx="12" fill="#4F46E5"/>
+        <text class="wcT" x="90" y="206">Pilot / staged rollout</text>
+        <text class="wcS" x="90" y="228">High stakes, hard to undo, but you are</text>
+        <text class="wcS" x="90" y="245">confident. Roll out to one region first,</text>
+        <text class="wcS" x="90" y="262">watch guardrails, then expand. A geo test</text>
+        <text class="wcS" x="90" y="279">(Session 4) is the tool.</text>
+        <rect x="460" y="170" width="380" height="130" rx="12" fill="#3730A3"/>
+        <text class="wcT" x="480" y="206">Experiment - always</text>
+        <text class="wcS" x="480" y="228">High stakes AND high uncertainty. Pricing,</text>
+        <text class="wcS" x="480" y="245">checkout flow, a big brand bet. This is</text>
+        <text class="wcS" x="480" y="262">exactly what your experimentation budget</text>
+        <text class="wcS" x="480" y="279">exists for. Never guess here.</text>
+        <!-- note -->
+        <rect x="70" y="312" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="wcN" x="92" y="323" style="fill:#1E1B3A">Reversibility matters as much as size: a cheap-to-undo mistake is a fast lesson; an expensive-to-undo one needs evidence first.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - stakes x uncertainty decides whether to ship, pilot, or experiment</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>The three questions to ask in any results review<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>You will spend more time <em>reading</em> experiments than commissioning them. These three questions, asked out loud, catch most bad claims - and you will have the vocabulary for all three by the end of the leader track.</p>
+        <ul>
+          <li><strong>"What is the control group?"</strong> - if there is no comparable group that did not get the change, it is a before/after story, not a test. (Session 1, today.)</li>
+          <li><strong>"Was it powered, and did we pre-commit to the sample size?"</strong> - underpowered tests and peeked-at tests both produce fake wins. (Session 2 and 3.)</li>
+          <li><strong>"Did anything about the split look off - lopsided groups, a weird week?"</strong> - the trust checklist that separates a clean test from a broken one. (Session 3.)</li>
+        </ul>
+        <div class="callout tip">
+          <strong>Your leverage is the question, not the calculation</strong>
+          A leader who reliably asks "where is the control group and did we pre-commit the sample size?" raises the quality of every experiment their org runs - without opening a notebook. That is the whole point of this track.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 2</span>
+      <h2>This week <span class="tag exercise">◐ 30 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Find one "it worked" claim</strong> in a recent deck or Slack thread in your org. Ask yourself: was there a control group, or is it before/after? Write one sentence on what the missing counterfactual is.</li>
+      <li><strong>Play with the peeking tool above.</strong> Set the peeks high and low. Notice the false-win rate climb with more peeking even though nothing is truly different. Bring the intuition to Session 2.</li>
+      <li><strong>Map three upcoming decisions</strong> onto the stakes x uncertainty grid. Which genuinely deserve an experiment, and which are you overthinking?</li>
+      <li><strong>Optional:</strong> list your team's top guardrail metrics - the numbers that must NOT get worse even if the headline metric wins. We formalize these in Session 6.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · A conversion chart rises the week after a launch. Why is that not proof the launch caused it?</p>
+      <button class="qopt" type="button">A · charts are always unreliable</button>
+      <button class="qopt" type="button">B · there is no comparable group that did NOT get the change, so the trend and the effect are tangled</button>
+      <button class="qopt" type="button">C · one week is too short to matter</button>
+      <p class="qwhy">Before/after has no control group, so seasonality, promos, and other shifts are baked into the "lift". The control group is your estimate of the counterfactual - what would have happened anyway.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · Email subscribers convert 3x better than everyone else. The safest reading is...</p>
+      <button class="qopt" type="button">A · email is clearly our best channel, fund it more</button>
+      <button class="qopt" type="button">B · subscribers are a coincidence</button>
+      <button class="qopt" type="button">C · subscribers self-selected on intent, so the gap is mostly who they are - engagement is a confounder</button>
+      <p class="qwhy">Self-selection makes the groups non-comparable. Only a holdout/randomized test isolates email's true incremental effect, which is usually far smaller than the raw gap.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · Which decision most clearly deserves a full experiment?</p>
+      <button class="qopt" type="button">A · a high-stakes, hard-to-reverse change you are genuinely unsure about (e.g. a pricing overhaul)</button>
+      <button class="qopt" type="button">B · changing a button colour on a low-traffic page</button>
+      <button class="qopt" type="button">C · fixing an obvious typo in the footer</button>
+      <p class="qwhy">Experimentation budget belongs where stakes AND uncertainty are both high. Low-stakes, easy-to-reverse, confident changes should just ship - testing them costs more than being wrong.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">This leader session distills the "why" that the technical courses assume you already believe. It covers ~80% of the conceptual foundation; the mechanics live in the builder track and the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Causation vs correlation, the counterfactual, confounding</span><span class="note">exec framing - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">When to commission an experiment (stakes x uncertainty)</span><span class="note">the decision grid - Part 2</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Kohavi, Tang &amp; Xu - Trustworthy Online Controlled Experiments</span><span class="note">the industry bible; we draw the culture chapters in Session 6</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Brady Neal - Intro to Causal Inference (concepts)</span><span class="note">the formal counterfactual model - Builder Session 1</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">The statistics (power, p-values, SRM)</span><span class="note">Leader Sessions 2-3, no math required</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Leader Session 1 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>The counterfactual</b><span>Causation = comparing what happened to what would have happened without the change. You never see it directly.</span></div>
+      <div class="cheat-item"><b>Control group</b><span>Your window into the counterfactual: comparable people who did not get the change, same time.</span></div>
+      <div class="cheat-item"><b>Confounder</b><span>A hidden common cause that fakes a correlation. Self-selection and seasonality are the usual suspects.</span></div>
+      <div class="cheat-item"><b>Before/after ≠ proof</b><span>A rising chart after a launch tangles your change with everything else that moved. Ask for the control group.</span></div>
+      <div class="cheat-item"><b>Peeking lies</b><span>Checking a live test daily and stopping at first "win" manufactures false positives. Pre-commit the sample size.</span></div>
+      <div class="cheat-item"><b>When to test</b><span>High stakes AND high uncertainty → experiment. Low stakes, reversible, confident → just ship.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Leader session 1 of 6 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="../index.html">← All sessions</a> &nbsp;·&nbsp; <a href="a2-reading-a-test.html">Next: Reading a test you didn't run →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/exp-live.js?v=1"></script>
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

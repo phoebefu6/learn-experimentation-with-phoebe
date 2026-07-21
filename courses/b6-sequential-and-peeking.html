@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 6 · Sequential testing and peeking - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 6 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 6 of 10</div>
+    <h1>Sequential testing, <span class="accent">and why peeking quietly breaks your A/B test</span></h1>
+    <p class="sub">A fixed-horizon p-value is only valid at one moment: the sample size you pre-committed to. Watch the dashboard every morning, stop the first day it dips under 0.05, and you have not run a 5% test - you have run a 20-30% one. This session shows the leak live, explains exactly why it happens, then builds three real fixes in numpy: always-valid inference, group-sequential boundaries, and a Thompson-sampling bandit. This is a platform-wide gap the course owns (Johari et al. 2017).</p>
+    <div class="chip-row">
+      <span class="chip level">🟠 Advanced</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · numpy / scipy</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:2">3-12 · See the leak</span>
+      <span class="a3" style="flex:3">12-24 · Why + the fixes</span>
+      <span class="a4" style="flex:4">24-42 · Build all three</span>
+      <span class="a4" style="flex:1">42-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The most common way a trustworthy test lies</h2>
+    </div>
+    <p class="lede">In b2 you computed that Lumen's flagship test - control 3.2% vs variant 3.6% - needs <strong>~32,000 users per arm</strong> to detect that 0.4pp lift at alpha 0.05, power 0.80. That number is a promise: the p-value you read is only a valid 5% test <em>at that N</em>. But real dashboards update live, and the temptation is unbearable - you look every morning, and the day it crosses 0.05 you call it. That habit, "peeking," silently converts your 5% false-positive rate into 20-30%+. Today you see it happen on a simulator, understand precisely why, and build the three families of fix that let you monitor continuously and still be honest.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      Three notebooks on Lumen: (1) a numpy reproduction of the peeking inflation - many A/A tests, peeked daily, landing ~20-30% false positives vs ~5% at a single final look; (2) an always-valid confidence sequence / mSPRT-style boundary that holds the error even under continuous monitoring; (3) a Thompson-sampling bandit on a 2-arm Lumen test that minimizes regret - and a clear-eyed read on the tradeoff it makes against clean fixed inference.
+    </div>
+  </section>
+
+  <!-- ============ MOTIVATING DEMO: THE WIDGET ============ -->
+  <section class="section" id="peeking-demo">
+    <div class="section-kicker">
+      <span class="klabel">See it before we explain it</span>
+      <h2>Peek daily at an A/A test and watch alpha inflate <span class="tag concept">try it</span></h2>
+    </div>
+    <p class="lede">This simulator runs many A/A tests - two arms with <em>no real difference at all</em>, seeded from Lumen's 3.2% baseline and its ~32,000/arm horizon. The honest false-positive rate is 5% (the dashed line): that is what you get if you look exactly once, at the pre-committed N. The other number is what happens when you peek along the way and stop the first time p dips under 0.05. There is no real effect anywhere in this data - every "significant" result the peeking column reports is manufactured by looking.</p>
+    <div class="exp-live" data-tool="peeking" data-base="3.2" data-nfinal="32000" data-runs="400"></div>
+    <div class="callout tip">
+      <strong>Read the gap, not the numbers</strong>
+      Rerun it a few times. The single-look column hovers near 5% - exactly the alpha you designed for. The peeking column sits far above it, often 20-30%. Same data, same null, same alpha. The only thing that changed is how many times you looked. The rest of this session explains why, and what to do instead.
+    </div>
+  </section>
+
+  <!-- ============ WHY IT HAPPENS ============ -->
+  <section class="section" id="why-peeking">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the mechanism</span>
+      <h2>Why fixed-horizon p-values only work once <span class="tag concept">5 min live</span></h2>
+    </div>
+    <p class="lede">A classical p-value is calibrated for a single decision at a pre-committed sample size. Under the null, the running test statistic wanders like a random walk. Give it many chances to cross the 0.05 threshold - one per peek - and the probability that it crosses <em>at least once</em> grows far past 5%. This is a multiple-comparisons problem in disguise, except the comparisons are strung out over time instead of across metrics. You are not testing once; you are testing every day and reporting the best day.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Many p-value paths over time under the null; several dip below the 0.05 line at least once, triggering false alarms, versus the single valid endpoint at the pre-committed N.">
+        <style>
+          .pkA { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .pkL { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .pkD { font: 700 11px Inter, sans-serif; fill: #DC2626; }
+          .pkPath { fill: none; stroke: #A5B4FC; stroke-width: 2; }
+          .pkBad { fill: none; stroke: #DC2626; stroke-width: 2.4; }
+          .pkFinal { fill: none; stroke: #3730A3; stroke-width: 3; }
+        </style>
+        <!-- axes -->
+        <line x1="70" y1="40" x2="70" y2="270" stroke="#C7C4DE" stroke-width="1.5"/>
+        <line x1="70" y1="270" x2="840" y2="270" stroke="#C7C4DE" stroke-width="1.5"/>
+        <text class="pkA" x="18" y="46" transform="rotate(-90 18,46)">p-value</text>
+        <text class="pkL" x="30" y="66">1.0</text>
+        <text class="pkL" x="30" y="274">0.0</text>
+        <text class="pkL" x="60" y="292">day 1</text>
+        <text class="pkL" x="740" y="292">final N (~32k/arm)</text>
+        <!-- 0.05 threshold -->
+        <line x1="70" y1="248" x2="840" y2="248" stroke="#DC2626" stroke-width="2" stroke-dasharray="7 5"/>
+        <text class="pkD" x="700" y="243">alpha = 0.05</text>
+        <!-- benign null paths that stay above -->
+        <path class="pkPath" d="M70,120 C180,150 300,110 430,160 560,130 700,175 840,150"/>
+        <path class="pkPath" d="M70,90 C180,130 300,170 430,120 560,180 700,140 840,200"/>
+        <path class="pkPath" d="M70,180 C200,140 320,200 460,160 600,210 720,170 840,190"/>
+        <!-- two paths that DIP below the line at least once (false alarms) -->
+        <path class="pkBad" d="M70,140 C160,180 250,240 320,252 380,240 520,190 620,235 720,170 840,150"/>
+        <circle cx="320" cy="252" r="5" fill="#DC2626"/>
+        <text class="pkD" x="300" y="278">false alarm</text>
+        <path class="pkBad" d="M70,160 C170,200 260,180 380,210 480,255 560,235 680,200 840,170"/>
+        <circle cx="480" cy="255" r="5" fill="#DC2626"/>
+        <!-- the single valid endpoint -->
+        <line x1="740" y1="40" x2="740" y2="270" stroke="#3730A3" stroke-width="1.4" stroke-dasharray="3 4"/>
+        <circle cx="740" cy="150" r="6" fill="#3730A3"/>
+        <text class="pkA" x="640" y="118">the ONE valid look</text>
+        <!-- note squares -->
+        <rect x="70" y="306" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="pkL" x="92" y="317" style="fill:#1E1B3A">Under the null, each path is a random walk. Any single day it is below 0.05 with prob ~5% - but "below on ANY day" compounds fast.</text>
+        <rect x="70" y="330" width="14" height="14" rx="3" fill="#3730A3"/>
+        <text class="pkL" x="92" y="341" style="fill:#1E1B3A">Only the indigo endpoint at the pre-committed N carries the 5% guarantee. Reading a path's minimum is reading its luckiest moment.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - many null p-value paths; the red ones dip under 0.05 at least once, but only the pre-committed endpoint is valid</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Peeking is multiple comparisons over time<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>If you test once, P(false positive) = alpha = 0.05. If you test on <em>k</em> independent-ish occasions and reject the first time any crosses, the family-wise error rate balloons toward 1 as k grows - the same logic as testing many metrics in b4, just spread across calendar days. Continuous monitoring is the k = infinity limit.</p>
+        <ul>
+          <li><strong>Fixed-horizon validity is conditional.</strong> The p-value's 5% calibration assumes you commit to exactly one look, at exactly the planned N. Break that promise and the number no longer means what it says.</li>
+          <li><strong>Stopping early on a win inflates the effect too.</strong> You are most likely to cross the line on a lucky upswing, so the effect you report at the stop is biased high - a double penalty (winner's curse).</li>
+          <li><strong>It is not fixed by "just wait for significance".</strong> The problem is the <em>rule</em> (stop when p&lt;0.05), not any single look.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>A Lumen analyst ships the hero-first layout on day 4 because "it hit p=0.03 this morning." By day 11 the effect has drifted back to zero. Nothing went wrong with the layout - the day-4 dip was one of the red paths above. This is the single most common way a well-run experimentation program still ships noise.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>Just how bad does it get?<span class="mini">2 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Johari, Pekelis, Walsh &amp; Koomen ("Peeking at A/B Tests," KDD 2017, the Optimizely team) showed that continuous monitoring of a fixed-horizon test pushes the true Type I error to roughly <strong>0.30 or higher</strong> - a nominal 5% test that lies one time in three. Their paper is why Optimizely and other platforms switched their default engines to always-valid inference. That paper, and Deng/Xu/Kohavi 2013 for b7, are the two primary sources no other platform course teaches well - the reason this course exists.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ THE FIXES ============ -->
+  <section class="section" id="fixes">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · three families of fix</span>
+      <h2>How to monitor continuously and stay honest <span class="tag concept">5 min live</span></h2>
+    </div>
+    <p class="lede">There are three respectable answers. The first two keep clean inference (a valid p-value or interval at any stopping time); the third abandons fixed inference on purpose to chase a different goal - minimizing lost conversions. Know which problem you are solving before you pick.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two group-sequential boundary curves over five interim looks: Pocock is a constant boundary spending alpha evenly, O'Brien-Fleming is stringent early and near nominal at the end.">
+        <style>
+          .gsA { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .gsL { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .gsPoc { fill: none; stroke: #6366F1; stroke-width: 3; }
+          .gsObf { fill: none; stroke: #3730A3; stroke-width: 3; }
+          .gsDot1 { fill: #6366F1; }
+          .gsDot2 { fill: #3730A3; }
+        </style>
+        <!-- axes -->
+        <line x1="80" y1="40" x2="80" y2="250" stroke="#C7C4DE" stroke-width="1.5"/>
+        <line x1="80" y1="250" x2="840" y2="250" stroke="#C7C4DE" stroke-width="1.5"/>
+        <text class="gsA" x="20" y="52" transform="rotate(-90 20,52)">critical z boundary</text>
+        <text class="gsL" x="40" y="60">high</text>
+        <text class="gsL" x="46" y="252">low</text>
+        <text class="gsL" x="86" y="270">look 1</text>
+        <text class="gsL" x="740" y="270">look 5 (final N)</text>
+        <!-- Pocock: constant boundary -->
+        <line class="gsPoc" x1="120" y1="150" x2="800" y2="150"/>
+        <circle class="gsDot1" cx="120" cy="150" r="5"/>
+        <circle class="gsDot1" cx="290" cy="150" r="5"/>
+        <circle class="gsDot1" cx="460" cy="150" r="5"/>
+        <circle class="gsDot1" cx="630" cy="150" r="5"/>
+        <circle class="gsDot1" cx="800" cy="150" r="5"/>
+        <text class="gsA" x="500" y="140" style="fill:#6366F1">Pocock - constant, spends alpha evenly</text>
+        <!-- O'Brien-Fleming: stringent early, drops toward nominal at end -->
+        <path class="gsObf" d="M120,70 C260,95 380,145 460,180 560,210 700,225 800,232"/>
+        <circle class="gsDot2" cx="120" cy="70" r="5"/>
+        <circle class="gsDot2" cx="290" cy="120" r="5"/>
+        <circle class="gsDot2" cx="460" cy="180" r="5"/>
+        <circle class="gsDot2" cx="630" cy="218" r="5"/>
+        <circle class="gsDot2" cx="800" cy="232" r="5"/>
+        <text class="gsA" x="150" y="62" style="fill:#3730A3">O'Brien-Fleming - very strict early</text>
+        <text class="gsL" x="640" y="248">near nominal at the end</text>
+        <!-- note squares -->
+        <rect x="80" y="290" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="gsL" x="102" y="301" style="fill:#1E1B3A">Both spend a total alpha of 0.05 across the 5 pre-planned looks. Pocock makes early stopping easier; OBF protects the final-look power.</text>
+        <rect x="80" y="314" width="14" height="14" rx="3" fill="#3730A3"/>
+        <text class="gsL" x="102" y="325" style="fill:#1E1B3A">Lan-DeMets alpha-spending generalizes both to any schedule of looks - you do not have to fix the look times in advance.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - Pocock (constant) vs O'Brien-Fleming (stringent early, near-nominal at the end) boundaries over interim looks</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Fix 1 - always-valid / anytime-valid inference<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Design the statistic so it is valid at <em>every</em> sample size simultaneously, not just one. Then you can look as often as you like and stop whenever you want, and the guarantee holds.</p>
+        <ul>
+          <li><strong>mSPRT</strong> (mixture sequential probability ratio test) - the engine in Johari et al. 2017, deployed at Optimizely. It yields an always-valid p-value.</li>
+          <li><strong>Confidence sequences</strong> - an interval that is simultaneously valid at all times; it starts wide and tightens as data arrives. Stop when it excludes zero, at any moment, with the coverage still honest.</li>
+        </ul>
+        <p>The cost is a little conservatism: to be valid at all times, the boundary is wider than a single fixed-N test, so you pay modestly more data for the freedom to peek.</p>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>Fix 2 - group-sequential boundaries (from clinical trials)<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Pre-plan a handful of interim looks and spend your total alpha across them so the family-wise rate stays at 0.05.</p>
+        <table class="clean">
+          <thead><tr><th>Boundary</th><th>Shape</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><b>Pocock</b></td><td>constant across looks</td><td>spends alpha evenly - easier early stops, slightly less power at the end</td></tr>
+            <tr><td><b>O'Brien-Fleming</b></td><td>very high early, drops to near-nominal at the final look</td><td>hard to stop early, preserves near-full power at the planned N</td></tr>
+            <tr><td><b>Lan-DeMets</b></td><td>an alpha-spending function</td><td>generalizes both to any (even unplanned) look schedule</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>Fix 3 - Bayesian bandits (a different goal entirely)<span class="mini">2 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Thompson sampling and other bandits shift traffic toward the arm that currently looks best, so fewer users see the loser. That <strong>minimizes regret</strong> - the conversions you forfeit while learning. But it is not solving the inference problem: a bandit does not hand you a clean fixed p-value or a crisp effect size, because the sampling probabilities and the data are now entangled.</p>
+        <div class="callout tip">
+          <strong>Optimize vs decide</strong>
+          Use a bandit when the goal is to <em>earn</em> during the test (short-lived promos, homepage modules where every impression costs money). Use always-valid or group-sequential inference when the goal is a <em>trustworthy verdict</em> you will ship org-wide. Do not use a bandit and then quote a p-value from it.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Reproduce the peeking inflation in numpy <span class="tag demo">★ 7 min · everyone</span></h2>
+    </div>
+    <p class="lede">Rebuild the widget's result yourself. Simulate many A/A tests on Lumen's 3.2% baseline - no real difference - accumulate users day by day, and count how often a daily peek finds "significance" versus a single look at the final N. You should land ~5% for the single look and ~20-30% for peeking.</p>
+    <div class="steps">
+      <div class="step"><p>Set up the null world: both arms convert at exactly 3.2%, ~2,000 users per arm per day, run to the ~32,000/arm horizon (~16 days).</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_peeking.py</span>
+<pre>import numpy as np
+from scipy import stats
+rng = np.random.default_rng(42)
+
+P0 = 0.032           # Lumen baseline; SAME in both arms (a true A/A)
+PER_DAY = 2_000      # users per arm per day (50/50 of ~4,000/day)
+DAYS = 16            # ~32,000/arm final horizon
+RUNS = 4_000
+
+def one_trial():
+    a_succ = a_n = b_succ = b_n = 0
+    hit_peek = False
+    for _ in range(DAYS):
+        a_succ += rng.binomial(PER_DAY, P0); a_n += PER_DAY
+        b_succ += rng.binomial(PER_DAY, P0); b_n += PER_DAY
+        if two_prop_p(a_succ, a_n, b_succ, b_n) &lt; 0.05:
+            hit_peek = True                    # stop-early rule fired at least once
+    p_final = two_prop_p(a_succ, a_n, b_succ, b_n)   # the ONE valid look
+    return hit_peek, (p_final &lt; 0.05)</pre>
+        </div>
+      </div>
+      <div class="step"><p>A pooled two-proportion z-test as the daily statistic:</p>
+        <div class="prompt-box good">
+          <span class="label">two_prop.py</span>
+<pre>def two_prop_p(x1, n1, x2, n2):
+    p1, p2 = x1 / n1, x2 / n2
+    p = (x1 + x2) / (n1 + n2)                  # pooled rate under H0
+    se = np.sqrt(p * (1 - p) * (1 / n1 + 1 / n2))
+    if se == 0: return 1.0
+    z = (p1 - p2) / se
+    return 2 * (1 - stats.norm.cdf(abs(z)))    # two-sided</pre>
+        </div>
+      </div>
+      <div class="step"><p>Run the whole thing and compare the two false-positive rates:</p>
+        <div class="prompt-box good">
+          <span class="label">run_peeking.py</span>
+<pre>res = np.array([one_trial() for _ in range(RUNS)])
+peek_fpr  = res[:, 0].mean()      # "significant on ANY day"
+final_fpr = res[:, 1].mean()      # significant at the pre-committed N only
+print(f"peeking daily  -&gt; false positives {peek_fpr:.1%}")   # ~20-30%
+print(f"single final look -&gt; false positives {final_fpr:.1%}") # ~5%</pre>
+        </div>
+      </div>
+      <div class="step"><p>There is no real effect in any run - <code>P0</code> is identical in both arms. Every "win" the peeking column reports is a false discovery you manufactured by looking. This is the widget, in ~30 lines you wrote.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Build an always-valid boundary that survives peeking <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Now implement a simple mSPRT-style always-valid statistic and rerun the exact same daily-peeking loop. This time the false-positive rate stays near 5% even though you look every single day - the boundary was built to be valid at all times.</p>
+    <div class="steps">
+      <div class="step"><p>An mSPRT for two proportions mixes the likelihood ratio over a prior on the effect. The always-valid p-value is <code>1 / max running likelihood ratio</code>. Here is a compact normal-approximation version on the difference in rates:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_msprt.py</span>
+<pre>def msprt_pvalue(diff, n_eff, tau2, sigma2):
+    # diff = observed rate difference; n_eff = harmonic effective N;
+    # tau2 = mixing-prior variance on the true effect; sigma2 = per-obs variance
+    v = sigma2 / n_eff                         # variance of the estimate
+    # mixture likelihood ratio of H1 (effect ~ N(0, tau2)) vs H0 (effect = 0)
+    lr = np.sqrt(v / (v + tau2)) * np.exp(
+        (diff ** 2) / 2 * (tau2 / (v * (v + tau2))))
+    return min(1.0, 1.0 / lr)                  # always-valid p-value</pre>
+        </div>
+      </div>
+      <div class="step"><p>Drop it into the same peeking loop - stop the first day the always-valid p dips under 0.05 - and count false positives over many A/A runs:</p>
+        <div class="prompt-box good">
+          <span class="label">run_msprt.py</span>
+<pre>def one_av_trial(tau2=0.001):
+    a_succ = a_n = b_succ = b_n = 0
+    fired = False
+    for _ in range(DAYS):
+        a_succ += rng.binomial(PER_DAY, P0); a_n += PER_DAY
+        b_succ += rng.binomial(PER_DAY, P0); b_n += PER_DAY
+        diff = a_succ / a_n - b_succ / b_n
+        n_eff = 1 / (1 / a_n + 1 / b_n)
+        sigma2 = P0 * (1 - P0)
+        if msprt_pvalue(diff, n_eff, tau2, sigma2) &lt; 0.05:
+            fired = True
+    return fired
+
+av_fpr = np.mean([one_av_trial() for _ in range(RUNS)])
+print(f"always-valid, peeked daily -&gt; false positives {av_fpr:.1%}")  # ~5%</pre>
+        </div>
+      </div>
+      <div class="step"><p>Same continuous monitoring, same null - but the error is controlled. The price is conservatism: on a <em>real</em> effect the always-valid test needs somewhat more data than a perfectly-timed fixed-N test would. That is the honest cost of the freedom to peek.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>This is essentially the engine Optimizely shipped after Johari et al. 2017. Confidence sequences (Howard et al.) give the interval-flavoured version - a band around the effect that is valid at every timestep; stop when it clears zero. Either lets Lumen's team watch the live dashboard guilt-free.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>A Thompson-sampling bandit - and the tradeoff it makes <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Code a 2-arm Thompson-sampling bandit on a Lumen test where the variant genuinely converts better (3.2% vs 3.6%). Watch it steer traffic toward the winner, minimizing regret - then see why the same behaviour makes a clean fixed p-value impossible.</p>
+    <div class="steps">
+      <div class="step"><p>Beta-Bernoulli Thompson sampling: keep a Beta posterior per arm, sample from each, serve whichever sample is higher, update with the realized outcome.</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_thompson.py</span>
+<pre>TRUE = {"control": 0.032, "variant": 0.036}    # variant really is better
+N = 32_000
+alpha = {"control": 1.0, "variant": 1.0}       # Beta priors
+beta  = {"control": 1.0, "variant": 1.0}
+pulls = {"control": 0, "variant": 0}
+
+for _ in range(N):
+    draw = {a: rng.beta(alpha[a], beta[a]) for a in TRUE}
+    arm = max(draw, key=draw.get)              # serve the best sample
+    reward = rng.random() &lt; TRUE[arm]          # did they convert?
+    pulls[arm] += 1
+    alpha[arm] += reward
+    beta[arm]  += 1 - reward</pre>
+        </div>
+      </div>
+      <div class="step"><p>Measure regret - conversions lost versus always serving the true best arm - and see how lopsided the traffic became:</p>
+        <div class="prompt-box good">
+          <span class="label">regret.py</span>
+<pre>best = max(TRUE.values())
+got  = sum(TRUE[a] * pulls[a] for a in TRUE)   # expected conversions earned
+regret = best * N - got
+print(pulls)                                   # most traffic went to 'variant'
+print(f"expected regret over {N} users: {regret:.1f} conversions")
+# compare: a 50/50 fixed A/B "wastes" ~half the traffic on the weaker arm</pre>
+        </div>
+      </div>
+      <div class="step"><p>Now try to read a verdict. The arms have wildly unequal, <em>outcome-dependent</em> sample sizes, so a plain two-proportion z-test is not valid here - assignment is correlated with the data. The bandit optimized earnings, not inference.</p>
+        <div class="callout tip">
+          <strong>Two goals, one choice</strong>
+          Regret minimized (bandit) and clean p-value (fixed / always-valid) are different objectives. If Lumen must decide "ship hero-first everywhere, forever," run a fixed or always-valid test and get a trustworthy answer. If it is a two-week promo module, let a bandit harvest conversions and accept there is no crisp significance statement at the end.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 7</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Plot false-positive rate vs number of peeks.</strong> Take demo 1 and vary the peeking cadence - look once, twice, weekly, daily, hourly. Plot the false-positive rate against the number of looks and watch it climb from 5% toward 30%+.</li>
+      <li><strong>Try a group-sequential design.</strong> Pick 5 pre-planned looks and apply O'Brien-Fleming-style boundaries (spend little alpha early, most at the end). Confirm the family-wise error stays at 5% while still allowing an early stop on a strong effect.</li>
+      <li><strong>Measure the always-valid tax.</strong> Rerun demo 2 with a genuine 3.2% vs 3.6% effect and record how many users the always-valid test needs to detect it, versus the ~32,000/arm fixed design. Quantify the conservatism.</li>
+      <li><strong>Optional:</strong> add a third arm to the Thompson bandit and plot cumulative regret over time for bandit vs 50/50 vs a group-sequential test - three curves, one picture of the tradeoff.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · Peeking at a fixed-horizon test and stopping the first time p&lt;0.05 inflates the Type I error because...</p>
+      <button class="qopt" type="button">A · the sample size gets too small</button>
+      <button class="qopt" type="button">B · the effect size is measured with more noise</button>
+      <button class="qopt" type="button">C · each look is another chance to cross the threshold, so P(cross at least once) far exceeds 5%</button>
+      <p class="qwhy">A fixed-horizon p-value is calibrated for one look at the pre-committed N. Many looks is multiple comparisons over time; under the null the running statistic crosses 0.05 on some day with probability that compounds toward 30%+ (Johari et al. 2017).</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">2 · How do Pocock and O'Brien-Fleming group-sequential boundaries differ?</p>
+      <button class="qopt" type="button">A · Pocock uses a constant boundary spending alpha evenly; O'Brien-Fleming is stringent early and near-nominal at the final look</button>
+      <button class="qopt" type="button">B · Pocock is Bayesian; O'Brien-Fleming is frequentist</button>
+      <button class="qopt" type="button">C · they are two names for the same boundary</button>
+      <p class="qwhy">Both spend a total alpha of 0.05 across pre-planned looks. Pocock's constant boundary makes early stopping easier; O'Brien-Fleming spends almost nothing early to protect final-look power. Lan-DeMets alpha-spending generalizes both.</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">3 · What does a Thompson-sampling bandit give you that a fixed A/B test does not - and at what cost?</p>
+      <button class="qopt" type="button">A · a cleaner p-value, at the cost of more data</button>
+      <button class="qopt" type="button">B · lower regret by steering traffic to the better arm, at the cost of a clean fixed inference / p-value</button>
+      <button class="qopt" type="button">C · guaranteed 5% Type I error under continuous monitoring</button>
+      <p class="qwhy">Bandits optimize - they minimize the conversions lost while learning by shifting traffic. But assignment becomes outcome-dependent, so you cannot read a valid fixed p-value from the result. Optimize vs decide: pick the goal first.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">Sequential testing and the peeking problem are a genuine gap on every major platform (DeepLearning.AI, Coursera, 365, LinkedIn, Udemy). This session owns it, taught from the primary source - Johari, Pekelis, Walsh &amp; Koomen, "Peeking at A/B Tests," KDD 2017. The bandit depth lives with Lazy Programmer's Bayesian A/B Udemy course.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Fixed-horizon inflation / the peeking problem</span><span class="note">simulator + numpy reproduction - Parts 0-1, build-along 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Always-valid / anytime-valid inference (mSPRT, confidence sequences)</span><span class="note">Johari et al. 2017 / Optimizely - Fix 1, build-along 2</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Group-sequential boundaries (Pocock, O'Brien-Fleming, Lan-DeMets)</span><span class="note">from clinical trials - Fix 2, SVG + homework</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Bandits / Thompson sampling and the regret-vs-inference tradeoff</span><span class="note">2-arm Lumen bandit - Fix 3, build-along 3</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Bayesian A/B in depth (priors, decision theory)</span><span class="note">Lazy Programmer (Udemy) owns the depth - concept-level here</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 6 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>The peeking problem</b><span>Fixed-horizon p-values are valid ONLY at the pre-committed N. Peek + stop early and Type I error inflates to ~30%+ (Johari 2017).</span></div>
+      <div class="cheat-item"><b>Why it happens</b><span>Each look is another chance to cross 0.05 - multiple comparisons over time. The k=∞ limit is continuous monitoring.</span></div>
+      <div class="cheat-item"><b>Always-valid inference</b><span>mSPRT + confidence sequences are valid at every N. Peek freely; cost is mild conservatism (a wider boundary).</span></div>
+      <div class="cheat-item"><b>Group-sequential</b><span>Pocock = constant boundary, spends alpha evenly. O'Brien-Fleming = strict early, near-nominal at the end. Lan-DeMets = alpha-spending generalizes both.</span></div>
+      <div class="cheat-item"><b>Bandits</b><span>Thompson sampling minimizes regret by shifting traffic - it does NOT give a clean fixed p-value. Optimize vs decide.</span></div>
+      <div class="cheat-item"><b>The rule to keep</b><span>Pre-commit your N and look once, OR use an always-valid / group-sequential method. Never read a path's luckiest day.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 6 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b5-multivariate-testing.html">← Prev: Multivariate testing</a> &nbsp;·&nbsp; <a href="b7-cuped-variance-reduction.html">Next: CUPED and variance reduction →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/exp-live.js?v=1"></script>
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

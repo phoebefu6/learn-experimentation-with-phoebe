@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>learn experimentation with phoebe - leader + builder tracks</title>
+<link rel="stylesheet" href="assets/style.css?v=1">
+<style>
+  .stats-row { display: flex; gap: 2.4rem; margin-top: 1.5rem; flex-wrap: wrap; }
+  .stat b { display: block; font-size: 2.1rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: .72rem; opacity: .85; text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
+
+  .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .course-card {
+    border: 1px solid var(--hairline);
+    border-top: 4px solid var(--diff, var(--indigo));
+    border-radius: var(--radius);
+    padding: 1.2rem 1.3rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    text-decoration: none;
+    color: var(--ink);
+    background: #fff;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+    position: relative;
+  }
+  .course-card:hover { border-color: var(--indigo-soft); border-top-color: var(--diff, var(--indigo)); box-shadow: 0 8px 28px rgba(79,70,229,.14); transform: translateY(-3px); }
+  .course-card .cicon { font-size: 1.7rem; line-height: 1; }
+  .course-card .cnum { font-size: .72rem; font-weight: 700; color: var(--indigo); text-transform: uppercase; letter-spacing: .1em; }
+  .course-card h3 { font-size: 1.05rem; font-weight: 800; line-height: 1.3; }
+  .course-card p { font-size: .85rem; color: var(--muted); flex: 1; }
+  .course-card .meta { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+  .diff-legend { display: flex; gap: 1rem; margin-top: 1.6rem; font-size: .74rem; color: var(--muted); font-weight: 600; flex-wrap: wrap; }
+  .diff-legend i { display: inline-block; width: .85rem; height: .35rem; border-radius: 999px; margin-right: .35rem; vertical-align: middle; }
+
+  .paths { margin-top: 2.6rem; }
+  .paths h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: .3rem; }
+  .paths .plede { color: var(--muted); font-size: .92rem; margin-bottom: .8rem; }
+  .path { display: flex; gap: .55rem; align-items: center; padding: .75rem 0; border-bottom: .5px solid var(--hairline); flex-wrap: wrap; }
+  .path:last-child { border-bottom: none; }
+  .path b { min-width: 15.5rem; font-size: .9rem; }
+  .path .pstep { background: var(--indigo-50); color: var(--indigo); border-radius: 999px; padding: .16rem .68rem; font-weight: 700; font-size: .8rem; text-decoration: none; transition: all .12s ease; }
+  .path .pstep:hover { background: var(--indigo); color: #fff; }
+  .path .parr { color: var(--faint); font-weight: 700; }
+
+  .mm-section { margin-top: 1.6rem; }
+  .mm-section h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: .2rem; }
+  .mm-section .mm-lede { color: var(--muted); font-size: .92rem; margin-bottom: .4rem; }
+  .mm-wrap { border: 1px solid var(--hairline); border-radius: var(--radius); background: linear-gradient(180deg,#fff, #FAFAFE); padding: .6rem; overflow-x: auto; }
+  .mm-svg { width: 100%; height: auto; display: block; max-width: 60rem; margin: 0 auto; min-width: 34rem; }
+  .mm-link { cursor: pointer; text-decoration: none; }
+  .mm-node rect { transition: opacity .15s ease, filter .15s ease; }
+  .mm-node text { pointer-events: none; }
+  .mm-link:hover .mm-node rect { filter: brightness(1.06); }
+  .mm-edge { transition: opacity .15s ease; }
+
+  .noteband { margin-top: 2.4rem; background: var(--indigo-50); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 1rem 1.2rem; font-size: .9rem; color: var(--ink); }
+  .noteband b { color: var(--indigo); }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe</div>
+    <h1>Did it actually work? <span class="accent">Experimentation, A/B testing</span> and causal inference, both halves.</h1>
+    <p class="sub">Two tracks, one running brand. The 6-session leader track teaches executives, PMs, and marketers the thinking moves - read a results deck, spot an underpowered or peeked-at test, know when a geo test beats a button test, and build a culture that experiments instead of guessing. The 10-session builder track takes practitioners from potential outcomes and power analysis through A/B and multivariate testing, sequential testing and the peeking problem, CUPED variance reduction, geo experiments and synthetic control, difference-in-differences, and observational causal inference - designed and analyzed from scratch in Python. Built from the leading experimentation and causal-inference courses, and honest that the modern online-experiment stack (sequential, CUPED, synthetic control) is the gap no single course teaches.</p>
+    <div class="stats-row">
+      <div class="stat"><b data-count="16">16</b><span>sessions, 2 tracks</span></div>
+      <div class="stat"><b data-count="9">9</b><span>methods, from A/B to causal</span></div>
+      <div class="stat"><b data-count="2">2</b><span>live in-browser simulators</span></div>
+      <div class="stat"><b data-count="1">1</b><span>running brand: Lumen</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="section">
+    <div class="paths" style="margin-top:0">
+      <h2>The leader track 🤝 <span style="font-size:.85rem;font-weight:600;color:var(--muted)">· for execs, PMs &amp; marketers · 6 x 45 min · no code</span></h2>
+      <p class="plede">An experiment is only as trustworthy as the questions you ask of it. This track teaches you to read the number, spot the traps that fool smart people, and decide which decisions are even worth a test - without opening a notebook. A friendly on-ramp for LinkedIn readers, too.</p>
+    </div>
+    <div class="course-grid">
+      <a class="course-card" href="courses/a1-why-experiments.html" style="--diff:#34D399">
+        <span class="cicon">🎯</span>
+        <span class="cnum">Leader session 1 · start here</span>
+        <h3>Why experiments beat opinions</h3>
+        <p>The counterfactual - the world you cannot see - and why a rising chart after a launch is a story, not proof. Plus a live demo of how peeking manufactures fake wins.</p>
+        <span class="meta"><span class="pill amber">▶ Start here</span><span class="pill light">No code</span></span>
+      </a>
+      <a class="course-card" href="courses/a2-reading-a-test.html" style="--diff:#34D399">
+        <span class="cicon">📖</span>
+        <span class="cnum">Leader session 2</span>
+        <h3>Reading a test you didn't run</h3>
+        <p>What MDE, power, p-value, and the confidence interval mean in plain language - and what "not significant" does and does not tell you.</p>
+        <span class="meta"><span class="pill light">Read the deck</span></span>
+      </a>
+      <a class="course-card" href="courses/a3-trust-checklist.html" style="--diff:#FBBF24">
+        <span class="cicon">✅</span>
+        <span class="cnum">Leader session 3</span>
+        <h3>The trust checklist</h3>
+        <p>Randomization, A/A, sample ratio mismatch, novelty, interference, guardrails - the questions that separate a clean test from a broken one.</p>
+        <span class="meta"><span class="pill light">Interrogate it</span></span>
+      </a>
+      <a class="course-card" href="courses/a4-beyond-the-button.html" style="--diff:#FBBF24">
+        <span class="cicon">🌍</span>
+        <span class="cnum">Leader session 4</span>
+        <h3>Beyond the button</h3>
+        <p>When user-level tests are impossible - TV, brand, privacy - geo experiments, holdouts, and incrementality carry the causal load. Bridges to attribution.</p>
+        <span class="meta"><span class="pill light">Geo &amp; incrementality</span></span>
+      </a>
+      <a class="course-card" href="courses/a5-when-you-cant-randomize.html" style="--diff:#FB923C">
+        <span class="cicon">🔀</span>
+        <span class="cnum">Leader session 5</span>
+        <h3>When you can't randomize</h3>
+        <p>Quasi-experiments for leaders - difference-in-differences and synthetic control in plain terms, and the humility observational evidence demands.</p>
+        <span class="meta"><span class="pill light">Quasi-experiments</span></span>
+      </a>
+      <a class="course-card" href="courses/a6-experimentation-culture.html" style="--diff:#FBBF24">
+        <span class="cicon">🏛️</span>
+        <span class="cnum">Leader session 6</span>
+        <h3>Building an experimentation culture</h3>
+        <p>OEC, guardrail metrics, ship/iterate/kill, and the ROI of a program where most tests fail on purpose. Capstone: commission Lumen's roadmap.</p>
+        <span class="meta"><span class="pill light">Capstone</span></span>
+      </a>
+    </div>
+
+    <div class="paths">
+      <h2>The builder track 🛠️ <span style="font-size:.85rem;font-weight:600;color:var(--muted)">· for practitioners · 10 x 45 min · Python</span></h2>
+      <p class="plede">For DA, DE, DS, and growth engineers. One running brand - Lumen Skincare - tested every way: from the potential-outcomes foundation and power analysis, through A/B and multivariate tests, the peeking problem and CUPED, to geo experiments, difference-in-differences, and honest observational causal inference - built from scratch on the same data.</p>
+    </div>
+    <div class="course-grid">
+      <a class="course-card" href="courses/b1-potential-outcomes.html" style="--diff:#34D399">
+        <span class="cicon">🔮</span>
+        <span class="cnum">Builder session 1 · start here</span>
+        <h3>Potential outcomes and the estimand</h3>
+        <p>The Rubin framework in code - two potential outcomes, one observed - and why one line (a coin flip) turns a biased guess into a causal answer.</p>
+        <span class="meta"><span class="pill amber">▶ Start here</span><span class="pill light">Python</span></span>
+      </a>
+      <a class="course-card" href="courses/b2-power-and-sample-size.html" style="--diff:#34D399">
+        <span class="cicon">🔋</span>
+        <span class="cnum">Builder session 2</span>
+        <h3>Power and sample size</h3>
+        <p>Type I and II error, power, and MDE - then compute the ~32,000 users per arm Lumen's test needs, with a live planner you rebuild in statsmodels.</p>
+        <span class="meta"><span class="pill light">Design the test</span></span>
+      </a>
+      <a class="course-card" href="courses/b3-randomization-and-trust.html" style="--diff:#FBBF24">
+        <span class="cicon">🎲</span>
+        <span class="cnum">Builder session 3</span>
+        <h3>Randomization and trust</h3>
+        <p>Unit of randomization, SUTVA, stratification, the A/A test, and the sample-ratio-mismatch chi-square check that halts a broken experiment.</p>
+        <span class="meta"><span class="pill light">Protect validity</span></span>
+      </a>
+      <a class="course-card" href="courses/b4-run-an-ab-test.html" style="--diff:#FBBF24">
+        <span class="cicon">🧪</span>
+        <span class="cnum">Builder session 4</span>
+        <h3>Run and analyze an A/B test</h3>
+        <p>The two-proportion z-test, confidence intervals, effect size, and the multiple-comparisons correction that makes a naive "winner" evaporate.</p>
+        <span class="meta"><span class="pill light">The payoff test</span></span>
+      </a>
+      <a class="course-card" href="courses/b5-multivariate-testing.html" style="--diff:#FB923C">
+        <span class="cicon">🧬</span>
+        <span class="cnum">Builder session 5</span>
+        <h3>Multivariate testing</h3>
+        <p>Full vs fractional factorial, interaction effects, and two-way ANOVA - plus why aliasing hides the very interactions you hoped to find.</p>
+        <span class="meta"><span class="pill light">Many factors</span></span>
+      </a>
+      <a class="course-card" href="courses/b6-sequential-and-peeking.html" style="--diff:#FB923C">
+        <span class="cicon">👀</span>
+        <span class="cnum">Builder session 6</span>
+        <h3>Sequential testing and peeking</h3>
+        <p>Why peeking inflates false positives to 30%+, and the fixes - always-valid inference, group-sequential boundaries, and bandits. With a live simulator.</p>
+        <span class="meta"><span class="pill light">Stop safely</span></span>
+      </a>
+      <a class="course-card" href="courses/b7-cuped-variance-reduction.html" style="--diff:#FB923C">
+        <span class="cicon">📉</span>
+        <span class="cnum">Builder session 7</span>
+        <h3>CUPED and variance reduction</h3>
+        <p>Use pre-experiment data to cut variance ~35% with zero bias - the Microsoft technique that shrinks Lumen's test from 32k to ~20k per arm.</p>
+        <span class="meta"><span class="pill light">Fewer users</span></span>
+      </a>
+      <a class="course-card" href="courses/b8-geo-and-synthetic-control.html" style="--diff:#F87171">
+        <span class="cicon">🗺️</span>
+        <span class="cnum">Builder session 8</span>
+        <h3>Geo experiments and synthetic control</h3>
+        <p>When you can only split by region - build a synthetic counterfactual from a weighted donor pool, validate the pre-period fit, and run placebo tests.</p>
+        <span class="meta"><span class="pill light">Region-level</span></span>
+      </a>
+      <a class="course-card" href="courses/b9-difference-in-differences.html" style="--diff:#F87171">
+        <span class="cicon">📊</span>
+        <span class="cnum">Builder session 9</span>
+        <h3>Difference-in-differences</h3>
+        <p>Parallel trends, two-way fixed effects, and the event study - plus the staggered-adoption critique that broke the classic estimator.</p>
+        <span class="meta"><span class="pill light">Change-in-change</span></span>
+      </a>
+      <a class="course-card" href="courses/b10-observational-causal-inference.html" style="--diff:#F87171">
+        <span class="cicon">🧩</span>
+        <span class="cnum">Builder session 10</span>
+        <h3>Observational causal inference</h3>
+        <p>Confounding, backdoor paths and DAGs, propensity scores and IPW, doubly-robust estimators - and the honest ceiling when you cannot randomize. Capstone.</p>
+        <span class="meta"><span class="pill light">Capstone</span></span>
+      </a>
+    </div>
+    <div class="diff-legend">
+      <span><i style="background:#34D399"></i>start here - foundations</span>
+      <span><i style="background:#FBBF24"></i>building up - the craft</span>
+      <span><i style="background:#FB923C"></i>getting real - advanced methods</span>
+      <span><i style="background:#F87171"></i>hardest - causal &amp; quasi-experimental</span>
+    </div>
+
+    <div class="paths">
+      <h2>Choose your path 🗺️</h2>
+      <p class="plede">Leaders start at Leader session 1; practitioners start at Builder session 1. The fast-tracks fit a specific gap.</p>
+      <div class="path"><b>🤝 Leader journey (no code)</b>
+        <a class="pstep" href="courses/a1-why-experiments.html">A1</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a2-reading-a-test.html">A2</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a3-trust-checklist.html">A3</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a4-beyond-the-button.html">A4</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a5-when-you-cant-randomize.html">A5</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a6-experimentation-culture.html">A6</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b1-potential-outcomes.html">curious? Builder session 1</a>
+      </div>
+      <div class="path"><b>🛠️ Full builder journey</b>
+        <a class="pstep" href="courses/b1-potential-outcomes.html">1</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b2-power-and-sample-size.html">2</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b3-randomization-and-trust.html">3</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b4-run-an-ab-test.html">4</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b5-multivariate-testing.html">5</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b6-sequential-and-peeking.html">6</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b7-cuped-variance-reduction.html">7</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b8-geo-and-synthetic-control.html">8</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b9-difference-in-differences.html">9</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b10-observational-causal-inference.html">10</a>
+      </div>
+      <div class="path"><b>⚡ Ship-a-clean-A/B fast-track</b>
+        <a class="pstep" href="courses/b1-potential-outcomes.html">1</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b2-power-and-sample-size.html">2</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b3-randomization-and-trust.html">3</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b4-run-an-ab-test.html">4</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b6-sequential-and-peeking.html">6</a>
+      </div>
+      <div class="path"><b>🧩 Causal-inference fast-track</b>
+        <a class="pstep" href="courses/b1-potential-outcomes.html">1</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b8-geo-and-synthetic-control.html">8</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b9-difference-in-differences.html">9</a><span class="parr">→</span>
+        <a class="pstep" href="courses/b10-observational-causal-inference.html">10</a>
+      </div>
+      <div class="path"><b>👔 Leader crash course (60 min)</b>
+        <a class="pstep" href="courses/a1-why-experiments.html">A1</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a3-trust-checklist.html">A3</a><span class="parr">→</span>
+        <a class="pstep" href="courses/a6-experimentation-culture.html">A6</a>
+      </div>
+    </div>
+
+    <div class="noteband">
+      <b>One brand, both tracks.</b> Every session works on <b>Lumen Skincare</b> - a synthetic $18M direct-to-consumer skincare label with nine marketing channels and a $4M media budget. Its flagship test: does a new product-page layout lift checkout from 3.2% to 3.6%? Leaders learn to read and trust that result; builders design it (the ~32,000-user-per-arm calculation), run it, protect it from peeking, sharpen it with CUPED, and - when a clean A/B is impossible - reach for geo tests, difference-in-differences, and propensity scores on the very same data.
+    </div>
+
+    <div class="noteband">
+      <b>Honest about scope.</b> Sessions distill the leading material - Udacity's A/B Testing (Google), 365 Data Science's A/B Testing in Python, Coursera's Crash Course in Causality (UPenn) and Experimentation for Improvement (McMaster), Brady Neal's causal inference course, and the key papers (Johari et al. on peeking, Deng-Xu-Kohavi on CUPED, Abadie on synthetic control, Card-Krueger and Callaway-Sant'Anna on DiD, Rosenbaum-Rubin on propensity). Certificates, videos, and graded assignments stay with their official sources. Content verified July 2026; re-check the fast-moving causal libraries (CausalImpact, DoWhy, EconML) before delivery.
+    </div>
+  </section>
+
+  <section class="section mm-section">
+    <h2>The knowledge map 🧠</h2>
+    <p class="mm-lede">The builder track at a glance - hover a session to spotlight its concepts, click any node to jump in.</p>
+    <div class="mm-wrap"><div id="mindmap"></div></div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a> · siblings: <a href="https://phoebefu6.github.io/learn-marketing-attribution-with-phoebe/">learn-marketing-attribution</a> · <a href="https://phoebefu6.github.io/learn-evals-with-phoebe/">learn-evals</a> · <a href="https://phoebefu6.github.io/learn-python-data-analysis-with-phoebe/">learn-python-data-analysis</a></span>
+  </footer>
+</main>
+
+<script>
+window.MINDMAP_DATA = {
+  title: "Experi-\nmentation",
+  centerColor: "#3730A3",
+  sessions: [
+    { label: "Potential\noutcomes", href: "courses/b1-potential-outcomes.html", color: "#34D399",
+      concepts: [
+        { label: "Y(1) / Y(0)", href: "courses/b1-potential-outcomes.html" },
+        { label: "ATE / ATT / CATE", href: "courses/b1-potential-outcomes.html" },
+        { label: "Why randomize", href: "courses/b1-potential-outcomes.html" } ] },
+    { label: "Power +\nsample size", href: "courses/b2-power-and-sample-size.html", color: "#34D399",
+      concepts: [
+        { label: "Type I / II error", href: "courses/b2-power-and-sample-size.html" },
+        { label: "MDE + rule of 16", href: "courses/b2-power-and-sample-size.html" },
+        { label: "Power curve", href: "courses/b2-power-and-sample-size.html" } ] },
+    { label: "Randomization\n+ trust", href: "courses/b3-randomization-and-trust.html", color: "#FBBF24",
+      concepts: [
+        { label: "SUTVA", href: "courses/b3-randomization-and-trust.html" },
+        { label: "A/A test", href: "courses/b3-randomization-and-trust.html" },
+        { label: "SRM chi-square", href: "courses/b3-randomization-and-trust.html" } ] },
+    { label: "Run an\nA/B test", href: "courses/b4-run-an-ab-test.html", color: "#FBBF24",
+      concepts: [
+        { label: "Two-proportion z", href: "courses/b4-run-an-ab-test.html" },
+        { label: "Confidence interval", href: "courses/b4-run-an-ab-test.html" },
+        { label: "Multiple comparisons", href: "courses/b4-run-an-ab-test.html" } ] },
+    { label: "Multivariate\ntesting", href: "courses/b5-multivariate-testing.html", color: "#FB923C",
+      concepts: [
+        { label: "Factorial designs", href: "courses/b5-multivariate-testing.html" },
+        { label: "Interactions", href: "courses/b5-multivariate-testing.html" },
+        { label: "Two-way ANOVA", href: "courses/b5-multivariate-testing.html" } ] },
+    { label: "Sequential\n+ peeking", href: "courses/b6-sequential-and-peeking.html", color: "#FB923C",
+      concepts: [
+        { label: "Peeking inflation", href: "courses/b6-sequential-and-peeking.html" },
+        { label: "Always-valid / mSPRT", href: "courses/b6-sequential-and-peeking.html" },
+        { label: "Bandits", href: "courses/b6-sequential-and-peeking.html" } ] },
+    { label: "CUPED\nvariance", href: "courses/b7-cuped-variance-reduction.html", color: "#FB923C",
+      concepts: [
+        { label: "theta = cov/var", href: "courses/b7-cuped-variance-reduction.html" },
+        { label: "Variance = rho^2", href: "courses/b7-cuped-variance-reduction.html" },
+        { label: "Pre-period only", href: "courses/b7-cuped-variance-reduction.html" } ] },
+    { label: "Geo +\nsynthetic ctrl", href: "courses/b8-geo-and-synthetic-control.html", color: "#F87171",
+      concepts: [
+        { label: "Donor pool", href: "courses/b8-geo-and-synthetic-control.html" },
+        { label: "Pre-period fit", href: "courses/b8-geo-and-synthetic-control.html" },
+        { label: "Placebo tests", href: "courses/b8-geo-and-synthetic-control.html" } ] },
+    { label: "Difference-in-\ndifferences", href: "courses/b9-difference-in-differences.html", color: "#F87171",
+      concepts: [
+        { label: "Parallel trends", href: "courses/b9-difference-in-differences.html" },
+        { label: "Two-way fixed effects", href: "courses/b9-difference-in-differences.html" },
+        { label: "Event study", href: "courses/b9-difference-in-differences.html" } ] },
+    { label: "Observational\ncausal", href: "courses/b10-observational-causal-inference.html", color: "#F87171",
+      concepts: [
+        { label: "Backdoor + DAGs", href: "courses/b10-observational-causal-inference.html" },
+        { label: "Propensity / IPW", href: "courses/b10-observational-causal-inference.html" },
+        { label: "Doubly robust", href: "courses/b10-observational-causal-inference.html" } ] }
+  ]
+};
+</script>
+<script src="assets/mindmap.js?v=1"></script>
+<script src="assets/app.js?v=1"></script>
+</body>
+</html>

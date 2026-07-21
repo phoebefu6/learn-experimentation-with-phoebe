@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leader session 5 · When you can't randomize - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Leader session 5 of 6</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Leader session 5 of 6</div>
+    <h1>When you can't randomize, <span class="accent">and still need an answer</span></h1>
+    <p class="sub">Sometimes there was no experiment. The loyalty program already launched in three regions. The policy already changed. Nobody flipped a coin, and you cannot rewind. You are left with observational evidence - and the temptation to read it as if it were a clean test. This session gives leaders the two most trusted quasi-experimental tools, difference-in-differences and synthetic control, in plain language, plus the one caveat that keeps you honest: these methods only correct for the things you thought to measure. No math, no code.</p>
+    <div class="chip-row">
+      <span class="chip level">🟠 Advanced</span>
+      <span class="chip audience">Leaders · C-level / PM / marketing</span>
+      <span class="chip audience">No code</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:4">3-22 · Difference-in-differences</span>
+      <span class="a3" style="flex:4">22-40 · Synthetic control</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The world that already happened</h2>
+    </div>
+    <p class="lede">A randomized test is the gold standard because the coin flip guarantees the two groups are alike in every way, measured or not. Quasi-experiments give that up. They work with the world as it unfolded - a program rolled out to some regions first, a change that hit one market and not another - and try to reconstruct the missing counterfactual after the fact. They can be genuinely convincing. They can also be quietly wrong. The leader's job is to know which, and to hold the evidence to the right standard.</p>
+    <div class="legend">
+      <span class="pill solid">Live - covered in session</span>
+      <span class="pill light">Self-study - read after</span>
+      <span class="pill amber">★ The one big idea</span>
+      <span class="pill inkpill">The case: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      Two tools and one warning. <em>Difference-in-differences</em> compares the change in a treated group to the change in a comparison group, so shared trends cancel out. <em>Synthetic control</em> builds a bespoke "Lumen-without-the-campaign" from a weighted blend of untreated regions, and judges its own credibility by how well it matches the real Lumen before the change. The warning: both only adjust for confounders you measured - the unknown ones remain, which is why these are weaker than a randomized test and should carry real humility.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: DIFFERENCE-IN-DIFFERENCES ============ -->
+  <section class="section" id="did">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the one big idea</span>
+      <h2>Difference-in-differences: compare the changes, not the levels <span class="tag concept">8 min live</span></h2>
+    </div>
+    <p class="lede">Lumen rolls a new loyalty program out to some regions before others. You cannot compare the treated regions' sales to the untreated ones directly - they were never identical to begin with. But you can compare how much each group <em>changed</em>. If the untreated regions rose 5% over the period and the treated regions rose 12%, the extra 7 points is the loyalty program's effect - assuming the two groups would have moved together without it. That subtraction of two changes is the whole idea, and it is why it is called difference-in-differences.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two revenue lines over time. Before treatment they rise together in parallel. After the loyalty program launches, the treated line jumps above where its parallel path would have taken it, and the gap is the effect.">
+        <style>
+          .ddL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .ddN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .ddAx { stroke: #C7C4DE; stroke-width: 2; }
+          .ddTreat { stroke: #3730A3; stroke-width: 3; fill: none; }
+          .ddCtrl { stroke: #6B6785; stroke-width: 3; fill: none; }
+          .ddCf { stroke: #C7C4DE; stroke-width: 2.5; fill: none; stroke-dasharray: 6 5; }
+        </style>
+        <!-- axes -->
+        <line class="ddAx" x1="70" y1="300" x2="840" y2="300"/>
+        <line class="ddAx" x1="70" y1="40" x2="70" y2="300"/>
+        <text class="ddN" x="30" y="60" transform="rotate(-90 30 60)"></text>
+        <text class="ddN" x="14" y="200" transform="rotate(-90 14 200)">weekly revenue →</text>
+        <!-- treatment line -->
+        <line class="ddAx" x1="450" y1="40" x2="450" y2="300" stroke-dasharray="4 4"/>
+        <text class="ddN" x="392" y="34">loyalty launch</text>
+        <!-- control line: rises steadily -->
+        <path class="ddCtrl" d="M90,250 L270,225 L450,200 L630,178 L810,158"/>
+        <text class="ddL" x="815" y="162" style="fill:#6B6785">Control</text>
+        <!-- treated line: parallel before, jumps after -->
+        <path class="ddTreat" d="M90,210 L270,185 L450,160 L630,110 L810,70"/>
+        <text class="ddL" x="815" y="74" style="fill:#3730A3">Treated</text>
+        <!-- counterfactual continuation of treated (parallel to control) -->
+        <path class="ddCf" d="M450,160 L630,138 L810,118"/>
+        <text class="ddN" x="640" y="132">would-have path</text>
+        <!-- the gap -->
+        <line x1="810" y1="70" x2="810" y2="118" stroke="#84CC16" stroke-width="5"/>
+        <rect x="640" y="60" width="150" height="26" rx="8" fill="#84CC16"/>
+        <text class="ddL" x="656" y="78" style="fill:#1A2E05">gap = the effect</text>
+        <!-- pre-parallel note -->
+        <text class="ddN" x="120" y="330" style="fill:#1E1B3A">Before launch the two rise in parallel - the assumption you must check. After launch, treated pulls above its would-have path.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - parallel before, a gap after; the gap over the would-have path is the effect</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>The parallel-trends assumption, in plain words<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Difference-in-differences rests on a single "what if": would the two groups have moved together if nothing had changed? That is the parallel-trends assumption, and it is the whole ballgame.</p>
+        <ul>
+          <li><strong>What it claims</strong> - absent the loyalty program, treated and comparison regions would have risen and fallen by the same amounts. Their lines would have stayed parallel.</li>
+          <li><strong>How you check it</strong> - look at the period <em>before</em> the change. If the two groups tracked together for months beforehand, the assumption is credible. If they were already diverging, it is not.</li>
+          <li><strong>How it breaks</strong> - if Lumen deliberately launched the program first in its fastest-growing regions, those were already pulling ahead. The "effect" would just be that head start.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen launches loyalty in 4 of its 9 regions. In the year before launch, treated and untreated regions grew almost in lockstep - good news for the assumption. After launch the treated regions accelerate, opening a gap the analysts read as roughly a few points of extra conversion. Because the pre-period was clean, the CMO trusts it enough to fund a wider rollout - but commissions a proper geo experiment to confirm.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>Why the double subtraction is clever<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>The elegance is that subtracting two changes cancels out anything shared. A nationwide promo, a seasonal dip, a supply shock - if it hit both groups equally, it lifts or drops both changes by the same amount and washes out of the difference. That is why difference-in-differences can survive a messy year that a simple before-and-after cannot.</p>
+        <ul>
+          <li><strong>Before-and-after (one group)</strong> - tangles the change with every other thing that moved. Session 1's trend trap.</li>
+          <li><strong>Treated vs control levels (one moment)</strong> - tangles the effect with the fact that the groups were never identical.</li>
+          <li><strong>Difference-in-differences</strong> - subtracts both problems away, <em>as long as</em> the shared-trends assumption holds.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>The leader question</strong>
+          "Show me the pre-period." A difference-in-differences result with no picture of the before-launch trends is asking you to take the key assumption on faith.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: SYNTHETIC CONTROL ============ -->
+  <section class="section" id="synth">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the leader's tool</span>
+      <h2>Synthetic control: build a fake Lumen that never got the campaign <span class="tag concept">7 min live</span></h2>
+    </div>
+    <p class="lede">Sometimes only one region got the treatment, and no single other region is a good match for it. Synthetic control solves this by building a made-up comparison out of a weighted blend of the untreated regions - say 40% of the East, 35% of the Central, 25% of the West - tuned so the blend traces the treated region's history almost exactly before the campaign. That blend becomes your "Lumen-without-the-campaign". After the campaign, the gap between the real region and its synthetic twin is the estimated effect.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A real treated region line and a synthetic counterfactual line built from a blend of donor regions. They overlap tightly before the campaign, then a gap opens after, which is the effect.">
+        <style>
+          .scL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .scN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .scAx { stroke: #C7C4DE; stroke-width: 2; }
+          .scReal { stroke: #3730A3; stroke-width: 3; fill: none; }
+          .scSyn { stroke: #6366F1; stroke-width: 3; fill: none; stroke-dasharray: 6 5; }
+        </style>
+        <!-- axes -->
+        <line class="scAx" x1="70" y1="300" x2="840" y2="300"/>
+        <line class="scAx" x1="70" y1="40" x2="70" y2="300"/>
+        <text class="scN" x="14" y="200" transform="rotate(-90 14 200)">weekly revenue →</text>
+        <!-- campaign line -->
+        <line class="scAx" x1="470" y1="40" x2="470" y2="300" stroke-dasharray="4 4"/>
+        <text class="scN" x="410" y="34">campaign start</text>
+        <!-- real + synthetic overlap tightly pre, diverge post -->
+        <path class="scReal" d="M90,240 L200,232 L310,220 L470,205 L610,150 L810,95"/>
+        <path class="scSyn" d="M90,242 L200,233 L310,222 L470,206 L610,190 L810,175"/>
+        <text class="scL" x="815" y="99" style="fill:#3730A3">Real</text>
+        <text class="scL" x="815" y="179" style="fill:#6366F1">Synthetic</text>
+        <!-- gap band -->
+        <line x1="810" y1="95" x2="810" y2="175" stroke="#84CC16" stroke-width="5"/>
+        <rect x="630" y="82" width="160" height="26" rx="8" fill="#84CC16"/>
+        <text class="scL" x="646" y="100" style="fill:#1A2E05">gap = the effect</text>
+        <!-- donor pool illustration -->
+        <rect x="120" y="80" width="150" height="70" rx="10" fill="#EEF2FF"/>
+        <text class="scN" x="136" y="102" style="fill:#1E1B3A">Synthetic twin =</text>
+        <text class="scN" x="136" y="120" style="fill:#1E1B3A">40% East + 35%</text>
+        <text class="scN" x="136" y="138" style="fill:#1E1B3A">Central + 25% West</text>
+        <!-- note -->
+        <text class="scN" x="120" y="330" style="fill:#1E1B3A">A tight pre-campaign match (the two lines sitting on top of each other) is the credibility test. A poor match means do not trust the gap.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - a good pre-period match earns the right to read the post-period gap</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>The pre-period match is the credibility test<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Synthetic control has a built-in honesty check that leaders can read without any math: how well does the synthetic twin match the real region <em>before</em> the campaign?</p>
+        <ul>
+          <li><strong>Tight match</strong> - the synthetic line sits almost on top of the real one for the whole pre-period. That earns the right to believe the post-period gap is real.</li>
+          <li><strong>Loose match</strong> - if the blend could not even reproduce the past, it has no business predicting the counterfactual. Distrust the effect.</li>
+          <li><strong>Placebo check</strong> - good analysts also run the method pretending an untreated region was treated. If those fake "effects" are as big as the real one, the real one is probably noise.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen ran its CTV burst hardest in one standout region. No single other region matched it, so the analysts built a synthetic twin from a blend of the other 8. The twin tracked the real region within a whisker for the full year before the burst, then the real region pulled clearly above it during the campaign. Because the pre-period fit was that tight, the result held up in the budget review.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>The honest caveat: only measured confounders<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Here is the line that separates a careful leader from an overconfident one. Both difference-in-differences and synthetic control can only adjust for the things you measured. A randomized test balances even the confounders nobody thought of, because the coin flip does not care what is measured. Observational methods cannot - an unknown factor that hit only the treated group will masquerade as effect.</p>
+        <ul>
+          <li><strong>Randomized test</strong> - balances known and unknown confounders alike. Strongest evidence.</li>
+          <li><strong>Quasi-experiment</strong> - balances only what you modelled and the assumption you made. Good, not gold.</li>
+          <li><strong>The humility rule</strong> - present the effect with its assumption stated out loud, and treat it as strong evidence, not proof.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>When to trust it vs demand a real experiment</strong>
+          Trust a quasi-experiment when a randomized test is genuinely impossible, the pre-period is clean, and the stakes are moderate. Demand a real experiment when the decision is large and hard to reverse and a randomized or geo test is feasible - the humility of the method should scale with the size of the bet.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 6</span>
+      <h2>This week <span class="tag exercise">◐ 30 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Find a staggered rollout in your org.</strong> Something that reached some regions, teams, or segments before others. Sketch how a difference-in-differences read would work, and where you would look for the pre-period trends.</li>
+      <li><strong>Stress-test one parallel-trends claim.</strong> For that rollout, ask: were the treated units already pulling ahead before the change? Write one sentence on whether the assumption is safe.</li>
+      <li><strong>Rank three past decisions by evidence strength.</strong> Which were backed by a randomized test, which by a quasi-experiment, which by a before-and-after story? Notice how confident each one was presented versus how strong the evidence actually was.</li>
+      <li><strong>Optional:</strong> pick one result you were shown as fact and ask what unmeasured confounder could still explain it. Bring it to Session 6.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · Lumen launched loyalty in some regions first. Why compare the change in each group rather than the raw sales levels?</p>
+      <button class="qopt" type="button">A · levels are harder to chart</button>
+      <button class="qopt" type="button">B · changes are always bigger numbers</button>
+      <button class="qopt" type="button">C · the groups were never identical, but subtracting two changes cancels shared trends and the starting gap</button>
+      <p class="qwhy">Difference-in-differences subtracts the comparison group's change from the treated group's change. Anything shared - seasonality, a national promo, the initial level gap - washes out, leaving the treatment effect.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">2 · What single thing would most convince you a synthetic-control result is credible?</p>
+      <button class="qopt" type="button">A · the synthetic twin matches the real region tightly across the whole pre-campaign period</button>
+      <button class="qopt" type="button">B · the effect is large</button>
+      <button class="qopt" type="button">C · many donor regions were used</button>
+      <p class="qwhy">If the blend cannot even reproduce the region's own history, it cannot be trusted to predict the counterfactual. A tight pre-period match is the credibility test; placebo checks reinforce it.</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">3 · Why is a quasi-experiment weaker than a randomized test, even with a clean pre-period?</p>
+      <button class="qopt" type="button">A · it uses less data</button>
+      <button class="qopt" type="button">B · it only adjusts for confounders you measured; unknown ones can still masquerade as effect</button>
+      <button class="qopt" type="button">C · it cannot be done in software</button>
+      <p class="qwhy">Randomization balances known and unknown confounders alike because the coin flip does not care what was measured. Observational methods correct only for what you modelled, so they carry an assumption a randomized test does not.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">This leader session distills the quasi-experimental toolkit the builder track builds in code. It covers ~80% of the conceptual content; the mechanics live in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Difference-in-differences and the parallel-trends assumption, in plain language</span><span class="note">exec framing - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Synthetic control - donor blend, pre-period match, placebo checks</span><span class="note">the leader's tool - Part 2</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">The observational caveat - only measured confounders, when to trust vs demand a test</span><span class="note">the humility rule - Part 2</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">DiD in code - TWFE, event study, staggered-adoption critique</span><span class="note">Builder Session 9</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Synthetic control (Abadie) and CausalImpact</span><span class="note">Builder Session 8</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">UPenn Crash Course in Causality; Resende Econometrics (Udemy)</span><span class="note">the formal methods and code home</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Leader Session 5 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Quasi-experiment</b><span>Reconstructing the counterfactual from the world as it happened, when no coin was flipped. Convincing but weaker than a randomized test.</span></div>
+      <div class="cheat-item"><b>Difference-in-differences</b><span>Compare the CHANGE in a treated group to the CHANGE in a comparison group. Shared trends cancel out.</span></div>
+      <div class="cheat-item"><b>Parallel trends</b><span>The key assumption: the two groups would have moved together without the change. Check it in the pre-period. Ask "show me the before."</span></div>
+      <div class="cheat-item"><b>Synthetic control</b><span>Build a fake "Lumen-without-the-campaign" from a weighted blend of untreated regions. Best when only one unit was treated.</span></div>
+      <div class="cheat-item"><b>Pre-period match</b><span>The credibility test - a tight fit before the change earns the right to read the gap after it. Placebo checks confirm.</span></div>
+      <div class="cheat-item"><b>The humility rule</b><span>These adjust only for confounders you measured. State the assumption out loud; demand a real experiment when the bet is big and reversible tests exist.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Leader session 5 of 6 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="a4-beyond-the-button.html">← Prev: Beyond the button</a> &nbsp;·&nbsp; <a href="a6-experimentation-culture.html">Next: Building an experimentation culture →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

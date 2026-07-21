@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 7 · CUPED and variance reduction - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 7 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 7 of 10</div>
+    <h1>CUPED, <span class="accent">the trick that cuts your sample size by a third for free</span></h1>
+    <p class="sub">Lumen's flagship test needs ~32,000 users per arm. What if you could get the same statistical power from ~20,500 - no bias, no new assumptions, just data you already have? That is CUPED: subtract off the part of each user's outcome you could have predicted from their pre-experiment behaviour, and the noise you are fighting shrinks. Because the covariate is measured <em>before</em> treatment, it is independent of assignment, so the effect estimate stays unbiased while its variance drops by ρ². Another gap this course owns (Deng, Xu, Kohavi &amp; Walker, WSDM 2013).</p>
+    <div class="chip-row">
+      <span class="chip level">🟠 Advanced</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · numpy / statsmodels</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-16 · The CUPED idea</span>
+      <span class="a3" style="flex:4">16-38 · Build it on Lumen</span>
+      <span class="a4" style="flex:1">38-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>Free power hiding in your history table</h2>
+    </div>
+    <p class="lede">Every Lumen shopper who lands in your test already has a past: how much they spent in the prior 30 days, how often they visited. That history is a strong predictor of what they will do next - and, crucially, it was fixed <em>before</em> you flipped anyone into treatment. CUPED (Controlled-experiment Using Pre-Existing Data) uses that predictable-in-advance part to de-noise the outcome. You are not changing the effect you estimate; you are removing variation that has nothing to do with the treatment. Less noise means tighter confidence intervals, which means you need fewer users to reach the same power. For Lumen's canonical test, a pre-period correlation of ρ≈0.6 turns ~32,000/arm into ~20,500/arm.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A Lumen notebook that (1) computes θ = Cov(Y,X)/Var(X) and forms the CUPED-adjusted outcome, shrinking variance by ~36% (the ~32,000/arm test drops to ~20,500/arm); (2) proves CUPED equals an OLS regression of the outcome on treatment plus the pre-period covariate - the same adjusted effect two ways; (3) demonstrates the one pitfall that ruins it - a covariate measured during or after treatment - and watches bias creep in, proving why the covariate must be strictly pre-treatment.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: THE IDEA ============ -->
+  <section class="section" id="idea">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the mechanism</span>
+      <h2>Subtract the predictable part of the outcome <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">Take the outcome <code>Y</code> (say, spend during the test) and a pre-period covariate <code>X</code> (prior-30-day spend). Define the CUPED-adjusted outcome <code>Y_cuped = Y - θ(X - E[X])</code>, with <code>θ = Cov(Y,X)/Var(X)</code>. Because we subtract only the mean-centred covariate, the <em>expected</em> value of <code>Y_cuped</code> is unchanged - so the estimated treatment effect is identical in expectation. But its variance is multiplied by <code>(1 - ρ²)</code>, where <code>ρ = corr(Y,X)</code>. The variance reduction is exactly <code>ρ²</code>. A pre-period version of the same metric commonly carries ρ≈0.5-0.7, so 25-50% of the noise simply vanishes.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A wide outcome distribution versus a narrower CUPED-adjusted distribution with the same mean, showing variance reduction without shifting the center.">
+        <style>
+          .vrA { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .vrL { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .vrWide { fill: #A5B4FC; opacity: 0.55; }
+          .vrNarrow { fill: #4F46E5; opacity: 0.85; }
+        </style>
+        <!-- baseline -->
+        <line x1="60" y1="230" x2="840" y2="230" stroke="#C7C4DE" stroke-width="1.5"/>
+        <!-- mean line -->
+        <line x1="450" y1="60" x2="450" y2="250" stroke="#3730A3" stroke-width="1.6" stroke-dasharray="4 4"/>
+        <text class="vrA" x="404" y="52" style="fill:#3730A3">same mean (effect unchanged)</text>
+        <!-- wide distribution (raw Y) -->
+        <path class="vrWide" d="M90,230 C230,225 320,120 450,110 580,120 670,225 810,230 Z"/>
+        <text class="vrA" x="130" y="150" style="fill:#3730A3">raw outcome Y</text>
+        <text class="vrL" x="130" y="168">wide - full variance</text>
+        <!-- narrow distribution (Y_cuped) -->
+        <path class="vrNarrow" d="M340,230 C400,225 425,120 450,110 475,120 500,225 560,230 Z"/>
+        <text class="vrA" x="560" y="150" style="fill:#FFFFFF">Y_cuped</text>
+        <text class="vrL" x="558" y="200" style="fill:#1E1B3A">narrow - ~36% less variance</text>
+        <!-- note squares -->
+        <rect x="60" y="266" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="vrL" x="82" y="277" style="fill:#1E1B3A">Same centre, thinner spread. Tighter CIs at the same N - equivalently, the same power with ~36% fewer users (ρ≈0.6 → variance × (1-0.36)).</text>
+        <rect x="60" y="290" width="14" height="14" rx="3" fill="#4F46E5"/>
+        <text class="vrL" x="82" y="301" style="fill:#1E1B3A">CUPED removes only PRE-experiment predictable variation, so it cannot move the mean - no bias, just less noise.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - CUPED narrows the outcome distribution without shifting its mean</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Why it is unbiased - the pre-treatment guarantee<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>The whole thing rests on one fact: <strong>the covariate is measured before treatment, so it cannot be affected by treatment.</strong> That makes <code>X</code> independent of assignment, so subtracting <code>θ(X - E[X])</code> is subtracting the same expected quantity from both arms. The difference in means - the treatment effect - is untouched in expectation. You are only cancelling noise that both arms share.</p>
+        <ul>
+          <li><strong>θ = Cov(Y,X)/Var(X)</strong> - the OLS slope of Y on X; the best linear amount of X to subtract.</li>
+          <li><strong>Variance reduction = ρ²</strong> where ρ = corr(Y,X). Same-metric pre-period: ρ≈0.5-0.7 → 25-50% cut.</li>
+          <li><strong>Fewer users for the same power</strong> - required N scales with variance, so a 36% variance cut is a ~36% smaller sample: ~32,000/arm → ~20,500/arm on Lumen.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Microsoft/Bing introduced CUPED (Deng, Xu, Kohavi &amp; Walker, WSDM 2013) and reported it routinely halving the data needed for the same sensitivity. It is now standard at essentially every large experimentation platform - and almost never taught in a course, which is exactly why it is here.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>CUPED is regression adjustment (Lin 2013)<span class="mini">2 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>CUPED with one pre-period covariate is algebraically the same as fitting <code>Y ~ treatment + X</code> by OLS and reading the treatment coefficient. That reframes it as plain regression adjustment. Lin (2013) gives the design-robust version - include the treatment×covariate interaction (equivalently, center X and interact) so the adjustment never <em>hurts</em> precision even under model misspecification, and the usual robust standard errors stay valid. In practice: use OLS with the pre-period covariate, robust SEs, and you have CUPED with a safety net.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: THE PITFALL ============ -->
+  <section class="section" id="pitfall">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the one way to break it</span>
+      <h2>The covariate must be strictly pre-treatment <span class="tag concept">4 min live</span></h2>
+    </div>
+    <p class="lede">There is exactly one fatal mistake with CUPED, and it is tempting because during-experiment covariates are often even more correlated with the outcome. If <code>X</code> is measured <em>during</em> or <em>after</em> treatment, it can itself be affected by the treatment - it becomes a post-treatment variable (a mediator or collider). Adjusting for it reintroduces bias, and now your "de-noised" effect is simply wrong. The scatter below shows the mechanism: a clean pre-period covariate scatters symmetrically around the regression line in both arms; a contaminated one shifts, dragging the adjusted estimate off the true effect.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter of the during-test outcome Y against the pre-period covariate X with the regression line; residuals from the line are the de-noised outcome.">
+        <style>
+          .thA { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .thL { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .thPt { fill: #6366F1; }
+          .thLine { stroke: #3730A3; stroke-width: 3; fill: none; }
+          .thRes { stroke: #84CC16; stroke-width: 1.6; }
+        </style>
+        <!-- axes -->
+        <line x1="80" y1="40" x2="80" y2="260" stroke="#C7C4DE" stroke-width="1.5"/>
+        <line x1="80" y1="260" x2="820" y2="260" stroke="#C7C4DE" stroke-width="1.5"/>
+        <text class="thA" x="24" y="60" transform="rotate(-90 24,60)">outcome Y (during test)</text>
+        <text class="thA" x="360" y="292">pre-period spend X (before test)</text>
+        <!-- regression line -->
+        <line class="thLine" x1="110" y1="230" x2="790" y2="80"/>
+        <!-- points with residual ticks to the line -->
+        <circle class="thPt" cx="160" cy="200" r="5"/><line class="thRes" x1="160" y1="200" x2="160" y2="219"/>
+        <circle class="thPt" cx="240" cy="215" r="5"/><line class="thRes" x1="240" y1="215" x2="240" y2="201"/>
+        <circle class="thPt" cx="320" cy="160" r="5"/><line class="thRes" x1="320" y1="160" x2="320" y2="183"/>
+        <circle class="thPt" cx="400" cy="175" r="5"/><line class="thRes" x1="400" y1="175" x2="400" y2="166"/>
+        <circle class="thPt" cx="480" cy="130" r="5"/><line class="thRes" x1="480" y1="130" x2="480" y2="148"/>
+        <circle class="thPt" cx="560" cy="145" r="5"/><line class="thRes" x1="560" y1="145" x2="560" y2="131"/>
+        <circle class="thPt" cx="640" cy="100" r="5"/><line class="thRes" x1="640" y1="100" x2="640" y2="114"/>
+        <circle class="thPt" cx="720" cy="115" r="5"/><line class="thRes" x1="720" y1="115" x2="720" y2="97"/>
+        <text class="thA" x="600" y="70" style="fill:#3730A3">slope = θ = Cov(Y,X)/Var(X)</text>
+        <text class="thA" x="150" y="150" style="fill:#5A7302">green tick = residual = de-noised Y</text>
+        <!-- note squares -->
+        <rect x="80" y="300" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="thL" x="102" y="311" style="fill:#1E1B3A">Y_cuped is the residual from this line (plus the mean back). The stronger the fit, the smaller the residuals - and ρ² of the variance is gone.</text>
+        <rect x="80" y="324" width="14" height="14" rx="3" fill="#DC2626"/>
+        <text class="thL" x="102" y="335" style="fill:#1E1B3A">DANGER: if X is measured DURING/AFTER treatment, it can respond to treatment - adjusting for it reintroduces bias. Pre-period only.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - θ is the slope of Y on the pre-period X; residuals are the de-noised outcome</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>Pre vs post - a one-line litmus test<span class="mini">2 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Ask: <em>could this variable have been written down before the user entered the experiment?</em> If yes (prior-30-day spend, tenure, historical visit count) it is safe. If it is anything the user did after assignment (sessions during the test, add-to-cart in the test window) it is post-treatment and off-limits for CUPED, no matter how predictive it looks. The seductiveness of a high correlation is exactly the trap.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Compute θ, form Y_cuped, measure the variance cut <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Build a Lumen population where each user has a pre-period covariate - prior-30-day spend - correlated with their in-test outcome at ρ≈0.6. Compute θ from Cov/Var, form the adjusted outcome, and confirm the variance drops ~36%, which turns the ~32,000/arm test into ~20,500/arm.</p>
+    <div class="steps">
+      <div class="step"><p>Simulate the pre-period covariate and a correlated outcome (ρ≈0.6 by canon), split 50/50 with a real +0.4pp-scale lift baked in:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_cuped.py</span>
+<pre>import numpy as np, pandas as pd
+rng = np.random.default_rng(42)
+N = 40_000
+RHO = 0.6                                   # canon: pre-period spend corr ~0.6
+
+X = rng.normal(60, 20, N)                   # prior-30-day spend (PRE-treatment)
+noise = rng.normal(0, 20, N)
+# outcome Y correlated with X at ~RHO; treatment adds a small lift
+T = (rng.random(N) &lt; 0.5).astype(int)
+Y = 50 + RHO * (X - 60) + np.sqrt(1 - RHO**2) * noise + 2.0 * T
+df = pd.DataFrame({"X": X, "Y": Y, "T": T})</pre>
+        </div>
+      </div>
+      <div class="step"><p>θ is the covariance of Y and X over the variance of X (pooled across arms), and Y_cuped subtracts the mean-centred covariate:</p>
+        <div class="prompt-box good">
+          <span class="label">form_cuped.py</span>
+<pre>theta = np.cov(df.Y, df.X, ddof=1)[0, 1] / np.var(df.X, ddof=1)
+df["Y_cuped"] = df.Y - theta * (df.X - df.X.mean())
+
+var_raw   = df.Y.var(ddof=1)
+var_cuped = df.Y_cuped.var(ddof=1)
+print(f"theta = {theta:.3f}")
+print(f"variance reduction = {1 - var_cuped/var_raw:.1%}")  # ~36% (= rho^2)</pre>
+        </div>
+      </div>
+      <div class="step"><p>Turn the variance cut into a sample-size cut - required N scales with variance, so a 36% variance reduction is a 36% smaller test:</p>
+        <div class="prompt-box good">
+          <span class="label">n_savings.py</span>
+<pre>reduction = 1 - var_cuped / var_raw          # ~0.36
+n_fixed = 32_000                             # per arm, from b2
+n_cuped = round(n_fixed * (1 - reduction), -2)
+print(f"~{n_fixed:,}/arm  -&gt;  ~{int(n_cuped):,}/arm")  # ~32,000 -&gt; ~20,500</pre>
+        </div>
+      </div>
+      <div class="step"><p>The mean of <code>Y_cuped</code> matches the mean of <code>Y</code> - the effect is preserved - but its spread is a third smaller. Same power, ~35% fewer users, no new assumptions. That is the whole win.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Prove CUPED equals regression adjustment <span class="tag demo">★ 7 min · everyone</span></h2>
+    </div>
+    <p class="lede">CUPED is not a separate trick - it is OLS of the outcome on treatment plus the pre-period covariate. Estimate the effect three ways (raw diff, CUPED-adjusted diff, OLS with X) and watch the two adjusted numbers coincide while the standard error shrinks.</p>
+    <div class="steps">
+      <div class="step"><p>Raw difference vs CUPED-adjusted difference in means:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_three_ways.py</span>
+<pre>raw = df.loc[df.T==1, "Y"].mean() - df.loc[df.T==0, "Y"].mean()
+cup = df.loc[df.T==1, "Y_cuped"].mean() - df.loc[df.T==0, "Y_cuped"].mean()
+print(f"raw diff        = {raw:.3f}")
+print(f"CUPED diff      = {cup:.3f}")   # ~same point estimate as raw</pre>
+        </div>
+      </div>
+      <div class="step"><p>Now the OLS of Y on treatment and the pre-period covariate - the treatment coefficient is the CUPED-adjusted effect:</p>
+        <div class="prompt-box good">
+          <span class="label">ols_adjust.py</span>
+<pre>import statsmodels.formula.api as smf
+m = smf.ols("Y ~ T + X", data=df).fit()
+print(m.params["T"], m.bse["T"])         # coef == CUPED effect; SE is shrunk
+
+m_raw = smf.ols("Y ~ T", data=df).fit()
+print(m_raw.params["T"], m_raw.bse["T"]) # bigger SE - no covariate</pre>
+        </div>
+      </div>
+      <div class="step"><p>The <code>T</code> coefficient from <code>Y ~ T + X</code> matches the CUPED difference, and its standard error is markedly smaller than the raw model's. For the design-robust Lin (2013) version, fit <code>Y ~ T * center(X)</code> with robust SEs so the adjustment can never hurt:</p>
+        <div class="prompt-box good">
+          <span class="label">lin_robust.py</span>
+<pre>df["Xc"] = df.X - df.X.mean()
+m_lin = smf.ols("Y ~ T * Xc", data=df).fit(cov_type="HC1")
+print(m_lin.params["T"], m_lin.bse["T"])  # design-robust CUPED</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>The pitfall demo - watch a post-treatment covariate lie <span class="tag demo">★ 7 min · everyone</span></h2>
+    </div>
+    <p class="lede">Now break it on purpose. Replace the clean pre-period covariate with one measured <em>during</em> the test - one that responds to treatment - and watch the CUPED-adjusted effect drift away from the truth. This is the single mistake that ruins CUPED, and seeing it once inoculates you for good.</p>
+    <div class="steps">
+      <div class="step"><p>Manufacture a contaminated covariate: an in-test signal that treatment itself moves (so it carries treatment information):</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_pitfall.py</span>
+<pre>TRUE_EFFECT = 2.0                            # what we baked into Y via +2.0*T
+# BAD covariate: measured DURING the test, pushed up by treatment
+X_post = 0.5 * df.X + 8.0 * df.T + rng.normal(0, 10, N)
+theta_bad = np.cov(df.Y, X_post, ddof=1)[0,1] / np.var(X_post, ddof=1)
+df["Y_bad"] = df.Y - theta_bad * (X_post - X_post.mean())</pre>
+        </div>
+      </div>
+      <div class="step"><p>Estimate the effect with the contaminated adjustment and compare to the truth and to the clean CUPED number:</p>
+        <div class="prompt-box good">
+          <span class="label">show_bias.py</span>
+<pre>bad = df.loc[df.T==1, "Y_bad"].mean() - df.loc[df.T==0, "Y_bad"].mean()
+print(f"true effect         = {TRUE_EFFECT:.2f}")
+print(f"clean CUPED effect  = {cup:.2f}")   # ~2.0, unbiased
+print(f"post-covariate est  = {bad:.2f}")   # BIASED - pulled off 2.0
+# adjusting for something treatment moved subtracts real effect =&gt; bias</pre>
+        </div>
+      </div>
+      <div class="step"><p>The clean CUPED estimate sits on the true 2.0; the post-treatment one is visibly off. By adjusting for a variable that treatment itself changed, you subtracted part of the real effect. This is why the pre-treatment rule is non-negotiable - no correlation is worth a biased answer.</p>
+        <div class="callout tip">
+          <strong>Predictive is not the same as permitted</strong>
+          The contaminated covariate often correlates <em>more</em> strongly with the outcome, which is exactly what makes the mistake tempting. The test is never "how predictive is it" - it is "was it fixed before assignment." If you cannot prove it was pre-treatment, do not adjust for it.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 8</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Sweep ρ, plot variance-reduction = ρ².</strong> Regenerate the population for ρ from 0.1 to 0.9, compute the realized variance reduction each time, and plot it against ρ². Confirm the points land on the ρ² curve - the theory is exact.</li>
+      <li><strong>Try a visit-count covariate.</strong> Swap prior-30-day spend for prior-30-day visit count (a weaker predictor, ρ≈0.3-0.4). Recompute θ and the sample-size saving, and see how the win shrinks with the correlation.</li>
+      <li><strong>Confirm the effect is preserved.</strong> Across many seeds, plot the CUPED effect estimate vs the raw estimate. Both center on the true effect; only the CUPED one has a tighter spread.</li>
+      <li><strong>Optional:</strong> combine two pre-period covariates (spend + visits) via the multivariate regression-adjustment form and see whether the extra covariate buys meaningful additional variance reduction.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · Why does CUPED reduce variance without introducing bias?</p>
+      <button class="qopt" type="button">A · it increases the sample size behind the scenes</button>
+      <button class="qopt" type="button">B · the covariate is measured before treatment, so it is independent of assignment - subtracting it cancels noise but not the effect</button>
+      <button class="qopt" type="button">C · it uses a Bayesian prior on the effect</button>
+      <p class="qwhy">A pre-treatment covariate cannot be affected by treatment, so mean-centred subtraction removes shared noise from both arms equally. The expected difference in means - the effect - is unchanged; only the variance drops, by ρ².</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · With θ = Cov(Y,X)/Var(X) and ρ = corr(Y,X), the variance reduction from CUPED is...</p>
+      <button class="qopt" type="button">A · θ</button>
+      <button class="qopt" type="button">B · 1 - θ</button>
+      <button class="qopt" type="button">C · ρ² - so a pre-period covariate with ρ≈0.6 cuts variance ~36% and the ~32,000/arm test drops to ~20,500/arm</button>
+      <p class="qwhy">Var(Y_cuped) = Var(Y)(1 - ρ²), so the reduction is exactly ρ². Required N scales with variance, so a 36% variance cut is a ~36% smaller sample.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · What is the one fatal mistake with CUPED?</p>
+      <button class="qopt" type="button">A · using a covariate measured during or after treatment - it can respond to treatment and reintroduces bias</button>
+      <button class="qopt" type="button">B · using a covariate that correlates too strongly with the outcome</button>
+      <button class="qopt" type="button">C · centering the covariate at its mean</button>
+      <p class="qwhy">The covariate must be strictly pre-treatment. A during/after covariate is post-treatment (a mediator/collider); adjusting for it subtracts part of the real effect and biases the estimate - no matter how predictive it looks.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">CUPED is standard practice at every large experimentation platform and taught by essentially none of them - a genuine gap this course owns. We teach it from the primary source: Deng, Xu, Kohavi &amp; Walker, "Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data," WSDM 2013 (Microsoft/Bing), with the regression-adjustment view from Lin (2013).</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">CUPED formula, θ = Cov(Y,X)/Var(X), variance reduction = ρ²</span><span class="note">Deng/Xu/Kohavi/Walker 2013 - Part 1, build-along 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">CUPED as regression adjustment (design-robust Lin 2013)</span><span class="note">OLS Y ~ T + X equivalence - build-along 2</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">The strictly-pre-treatment pitfall and why it biases</span><span class="note">post-treatment covariate demo - Part 2, build-along 3</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Sample-size savings on Lumen (~32,000/arm → ~20,500/arm)</span><span class="note">variance-to-N translation - build-along 1, homework</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Stratification and other variance-reduction methods</span><span class="note">named as siblings of CUPED - out of scope here by design</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 7 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>The CUPED idea</b><span>Remove pre-experiment predictable variation to shrink the effect estimate's variance - no bias (Deng/Xu/Kohavi 2013).</span></div>
+      <div class="cheat-item"><b>The formula</b><span>Y_cuped = Y - θ(X - E[X]), with θ = Cov(Y,X)/Var(X). θ is the OLS slope of Y on X.</span></div>
+      <div class="cheat-item"><b>Variance reduction</b><span>= ρ² where ρ = corr(Y,X). Same-metric pre-period: ρ≈0.5-0.7 → 25-50% cut.</span></div>
+      <div class="cheat-item"><b>On Lumen</b><span>Prior-30-day spend, ρ≈0.6 → ~36% variance cut → ~32,000/arm drops to ~20,500/arm for the same power.</span></div>
+      <div class="cheat-item"><b>It is regression</b><span>CUPED = OLS of Y on treatment + one pre-period covariate. Lin (2013) adds the interaction for a design-robust version.</span></div>
+      <div class="cheat-item"><b>The one rule</b><span>Covariate MUST be strictly pre-treatment. A during/after covariate responds to treatment and reintroduces bias.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 7 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b6-sequential-and-peeking.html">← Prev: Sequential testing and peeking</a> &nbsp;·&nbsp; <a href="b8-geo-and-synthetic-control.html">Next: Geo experiments and synthetic control →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leader session 2 · Reading a test you didn't run - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Leader session 2 of 6</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Leader session 2 of 6</div>
+    <h1>Reading a test <span class="accent">you didn't run</span></h1>
+    <p class="sub">A results deck lands in your inbox. It has a green "significant" badge, a lift number, and a confident recommendation. Your job is not to redo the math - it is to know whether the math means what the slide says it means. This session teaches the four words that show up on every results slide, what "not statistically significant" does and does not tell you, and the two or three tells of a test that was too small or read too hopefully. No math, no code - just the reading comprehension that stops a fragile result from becoming a shipped decision.</p>
+    <div class="chip-row">
+      <span class="chip level">🟢 Core</span>
+      <span class="chip audience">Leaders · C-level / PM / marketing</span>
+      <span class="chip audience">No code</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:4">3-20 · The four words</span>
+      <span class="a3" style="flex:3">20-34 · What p and CI claim</span>
+      <span class="a4" style="flex:2">34-45 · Feel the tradeoff + wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>You are the last line of defence</h2>
+    </div>
+    <p class="lede">By the time a test reaches your review, the data is collected and the analyst has done their honest best. The one thing still up for grabs is interpretation - and that is where good results turn into bad decisions. A slide that says "variant won, +12.5%, significant" can be true, or it can be a coin that happened to land heads. You cannot tell the difference by staring harder at the lift number. You tell the difference by reading four other numbers, and by knowing what silence (a "not significant" result) actually means. That is this session.</p>
+    <div class="legend">
+      <span class="pill solid">Live - covered in session</span>
+      <span class="pill light">Self-study - read after</span>
+      <span class="pill amber">★ The one big idea</span>
+      <span class="pill inkpill">The case: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A plain-language grip on the four words - significance, confidence interval, power, and MDE - so you can read any results deck without a statistician at your elbow. You will know why "not significant" is not the same as "no difference", why a result can be flagged "significant" and still probably be false, and how to spot the underpowered test that was doomed to be inconclusive before it ever ran. The confidence interval will become your favourite line on the slide.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: THE FOUR WORDS ============ -->
+  <section class="section" id="four-words">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · vocabulary</span>
+      <h2>The four words on every results slide <span class="tag concept">8 min live</span></h2>
+    </div>
+    <p class="lede">Lumen ran its flagship test: the old product page converts at 3.2%, and the team hoped a "hero-first" layout would push it to 3.6%. That is the story on every slide in this session. Four words decide whether that 0.4 point jump is real. Here is each one in a single exec sentence, grounded in that exact test.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four words defined against the Lumen test: MDE is the smallest lift you designed to catch, power is the odds of catching it, significance is how surprised you are if nothing is going on, and the confidence interval is the honest range around the result.">
+        <style>
+          .fwT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .fwL { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .fwS { font: 600 11px Inter, sans-serif; fill: #FFFFFF; opacity:.96; }
+          .fwN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <text class="fwL" x="30" y="30">The Lumen test in four words: 3.2% control vs 3.6% variant, ~32,000 users per arm</text>
+        <rect x="30" y="48" width="195" height="118" rx="12" fill="#3730A3"/>
+        <text class="fwT" x="48" y="76">MDE</text>
+        <text class="fwS" x="48" y="98">Smallest lift you</text>
+        <text class="fwS" x="48" y="114">designed to catch.</text>
+        <text class="fwS" x="48" y="136">Here: +0.4pt</text>
+        <text class="fwS" x="48" y="152">(a +12.5% relative).</text>
+        <rect x="242" y="48" width="195" height="118" rx="12" fill="#4F46E5"/>
+        <text class="fwT" x="260" y="76">Power</text>
+        <text class="fwS" x="260" y="98">Odds of catching a</text>
+        <text class="fwS" x="260" y="114">real lift that size.</text>
+        <text class="fwS" x="260" y="136">Here: 80% - so a</text>
+        <text class="fwS" x="260" y="152">1-in-5 chance you miss.</text>
+        <rect x="454" y="48" width="195" height="118" rx="12" fill="#6366F1"/>
+        <text class="fwT" x="472" y="76">Significance</text>
+        <text class="fwS" x="472" y="98">How surprised you'd</text>
+        <text class="fwS" x="472" y="114">be if nothing were</text>
+        <text class="fwS" x="472" y="136">going on. p&lt;0.05 =</text>
+        <text class="fwS" x="472" y="152">"quite surprised".</text>
+        <rect x="666" y="48" width="184" height="118" rx="12" fill="#A5B4FC"/>
+        <text class="fwL" x="684" y="76">Confidence interval</text>
+        <text class="fwN" x="684" y="98" style="fill:#1E1B3A">The honest range</text>
+        <text class="fwN" x="684" y="114" style="fill:#1E1B3A">the true lift likely</text>
+        <text class="fwN" x="684" y="136" style="fill:#1E1B3A">sits in. Narrow =</text>
+        <text class="fwN" x="684" y="152" style="fill:#1E1B3A">precise. Read this one.</text>
+        <rect x="30" y="188" width="820" height="46" rx="10" fill="#EEF2FF"/>
+        <text class="fwN" x="46" y="210" style="fill:#1E1B3A">MDE and power are decided BEFORE the test (they size it). Significance and the confidence interval are read AFTER (they judge it).</text>
+        <text class="fwN" x="46" y="227" style="fill:#1E1B3A">A deck that shows a lift but hides the confidence interval is telling you the headline and hiding the uncertainty.</text>
+        <rect x="30" y="254" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="fwN" x="52" y="265" style="fill:#1E1B3A">If you remember one thing: ask for the confidence interval. It contains the lift, the precision, and the honesty in one line.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - the four words, sized before the test and read after it</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>MDE and power - the two you set before the test<span class="mini">4 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>These two words are design choices, not findings. They are agreed before a single visitor is bucketed, and they quietly decide whether the test can succeed at all.</p>
+        <ul>
+          <li><strong>MDE (minimum detectable effect)</strong> - the smallest lift you promise to be able to see. For Lumen it is +0.4 points (3.2% to 3.6%, a +12.5% relative lift). Set the MDE smaller and you need far more traffic; set it larger and the test is cheap but blind to modest wins.</li>
+          <li><strong>Power</strong> - if a real lift of that size exists, the chance the test actually flags it. The industry default is 80%, which means a fully correct test still misses a true winner one time in five. Power below 80% is a test that is likely to come back "nothing here" even when something is there.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen's analyst sized the test for a +0.4 point MDE at 80% power and 95% significance. That is why the plan called for roughly 32,000 users per arm, about 64,000 in total, running around 16 to 17 days at 4,000 checkout sessions a day. Those are not arbitrary - they are the price of being able to detect a lift that small with confidence. If a rushed stakeholder had said "let's just run it for three days", the test would have been underpowered and almost guaranteed to be inconclusive, wasting the traffic entirely.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>Significance and the confidence interval - the two you read after<span class="mini">4 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>These two are the results. They arrive when the test is done, and they are what you actually interrogate in the review.</p>
+        <ul>
+          <li><strong>Statistical significance (the p-value)</strong> - a measure of surprise. It answers: if the two pages were truly identical, how often would pure luck hand us a gap this big or bigger? A p-value below 0.05 means "less than 1 time in 20" - surprising enough that we stop calling it luck. It is a threshold, not a truth.</li>
+          <li><strong>Confidence interval</strong> - the range of lifts consistent with the data, usually written as "95% CI". Instead of a single number it gives you a band, for example "+0.4 points, 95% CI +0.1 to +0.7". The width tells you the precision; whether it crosses zero tells you if the result is conclusive.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>Question to ask in a review</strong>
+          "What is the confidence interval, not just the point estimate?" A single lift number always looks precise. The interval reveals whether the true effect could be a strong win, a wash, or even a small loss - which is the difference between a decision and a guess.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: WHAT P<0.05 CLAIMS ============ -->
+  <section class="section" id="p-value">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the traps in the words</span>
+      <h2>What "significant" claims, and what it quietly does not <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">The single most misread phrase in any deck is "not statistically significant". People hear it as "we proved there is no difference". It means almost the opposite: we did not gather enough evidence to be sure there is one. Absence of evidence is not evidence of absence. And even a "significant" result carries a trap of its own when a team tests many things at once.</p>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>"Not significant" means "not proven", not "no effect"<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A "not significant" result has two very different possible causes, and the slide usually will not tell you which:</p>
+        <ul>
+          <li><strong>There genuinely is no meaningful effect</strong> - the change did nothing.</li>
+          <li><strong>There is an effect, but the test was too small to see it</strong> - underpowered, so the noise swamped the signal.</li>
+        </ul>
+        <p>These look identical on the slide and mean opposite things for your decision. The confidence interval is what tells them apart: a <em>tight</em> interval hugging zero really is evidence of "no meaningful effect", while a <em>wide</em> interval that happens to include zero is just an inconclusive test that could not decide.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen tested a free-shipping banner and the deck read "no significant lift, do not ship". But the confidence interval ran from -0.5 to +1.3 points - enormously wide, straddling zero. That was not proof the banner did nothing; it was proof the test was too small to tell. Reading "not significant" as "proven useless", the team almost killed an idea that a properly powered rerun later showed was a genuine win. "Not significant" was the analyst being honest about ignorance, not a verdict.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>The base-rate trap - "significant" can still be mostly wrong<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Here is the counter-intuitive one. If a team runs many tests, most of which are long shots, then a good share of the "significant" wins they celebrate will be flukes - even with the 5% threshold working exactly as designed.</p>
+        <ul>
+          <li>Say a team tries 20 ideas and, realistically, only 2 of them truly work.</li>
+          <li>Of the 18 duds, roughly 1 will pass the 5% significance bar by pure luck (that is what 5% means).</li>
+          <li>So the winners board reads "3 significant results" - but 1 of the 3 is a mirage. A third of your "wins" are noise, despite doing the statistics correctly.</li>
+        </ul>
+        <p>The fix is not to distrust statistics - it is to raise the prior. Test ideas that have a real reason to work, replicate surprising wins before betting big on them, and be extra sceptical of a "significant" result that nobody predicted.</p>
+        <div class="callout tip">
+          <strong>Question to ask in a review</strong>
+          "How many things did we test to find this winner?" A single win pulled from 30 quiet experiments deserves a confirmation run before it reshapes the roadmap.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 3: THE CONFIDENCE INTERVAL ============ -->
+  <section class="section" id="confidence-interval">
+    <div class="section-kicker">
+      <span class="klabel">Part 3 · your favourite line on the slide</span>
+      <h2>The confidence interval is the honest summary <span class="tag concept">5 min live</span></h2>
+    </div>
+    <p class="lede">If you only trained yourself to read one thing, make it the confidence interval. It folds three separate judgements into a single line: how big the effect is, how precisely you measured it, and whether the result is even conclusive. The two questions to ask of any interval are "how wide is it?" (precision) and "does it cross zero?" (conclusiveness).</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three confidence intervals against a zero line: a clear win sits entirely above zero, a clear loss entirely below, and an inconclusive result straddles zero.">
+        <style>
+          .a2ciT { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .a2ciN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .a2ciW { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+          .a2ciBar { stroke-width: 10; fill: none; stroke-linecap: round; }
+          .a2ciDot { fill: #1E1B3A; }
+        </style>
+        <!-- zero line -->
+        <line x1="440" y1="40" x2="440" y2="250" stroke="#DC2626" stroke-width="2" stroke-dasharray="5 4"/>
+        <text class="a2ciN" x="410" y="34" style="fill:#DC2626">no effect (zero)</text>
+        <text class="a2ciN" x="150" y="34">← worse</text>
+        <text class="a2ciN" x="700" y="34">better →</text>
+        <!-- row 1: clear win -->
+        <text class="a2ciT" x="30" y="76">Clear win</text>
+        <line class="a2ciBar" x1="520" y1="90" x2="700" y2="90" stroke="#4F46E5"/>
+        <circle class="a2ciDot" cx="610" cy="90" r="6"/>
+        <text class="a2ciN" x="716" y="94">+0.1 to +0.7pt - entire range is positive. Ship.</text>
+        <!-- row 2: inconclusive -->
+        <text class="a2ciT" x="30" y="146">Inconclusive</text>
+        <line class="a2ciBar" x1="300" y1="160" x2="640" y2="160" stroke="#84CC16"/>
+        <circle cx="470" cy="160" r="6" fill="#1A2E05"/>
+        <text class="a2ciN" x="656" y="164" style="fill:#1A2E05">-0.5 to +1.3pt - straddles zero. Not proven either way.</text>
+        <!-- row 3: clear loss -->
+        <text class="a2ciT" x="30" y="216">Clear loss</text>
+        <line class="a2ciBar" x1="180" y1="230" x2="360" y2="230" stroke="#3730A3"/>
+        <circle class="a2ciDot" cx="270" cy="230" r="6"/>
+        <text class="a2ciN" x="180" y="256">-0.7 to -0.1pt - entire range is negative. Do not ship.</text>
+        <!-- note band -->
+        <rect x="30" y="272" width="820" height="34" rx="10" fill="#EEF2FF"/>
+        <rect x="44" y="281" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="a2ciN" x="66" y="292" style="fill:#1E1B3A">The rule of thumb: if the whole interval is on one side of zero, you have a direction. If it crosses zero, the test could not decide - do not read it as "no effect".</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - does the interval cross zero? that one question decides conclusiveness</figcaption>
+    </figure>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An underpowered test: a small sample produces such a wide confidence interval that the true effect is hidden inside the noise, while a properly sized sample produces a narrow interval that reveals the same true effect as a clear win.">
+        <style>
+          .a2upT { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .a2upN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .a2upBar { stroke-width: 10; fill: none; stroke-linecap: round; }
+        </style>
+        <line x1="300" y1="40" x2="300" y2="210" stroke="#DC2626" stroke-width="2" stroke-dasharray="5 4"/>
+        <text class="a2upN" x="270" y="34" style="fill:#DC2626">zero</text>
+        <!-- true effect marker -->
+        <line x1="560" y1="40" x2="560" y2="210" stroke="#84CC16" stroke-width="2"/>
+        <text class="a2upN" x="512" y="34" style="fill:#1A2E05">true lift +0.4pt</text>
+        <!-- underpowered -->
+        <text class="a2upT" x="30" y="86">Small sample</text>
+        <text class="a2upN" x="30" y="104">~3,000 / arm</text>
+        <line class="a2upBar" x1="150" y1="126" x2="820" y2="126" stroke="#C7C4DE"/>
+        <circle cx="560" cy="126" r="6" fill="#6B6785"/>
+        <text class="a2upN" x="150" y="152">Interval so wide it swallows zero AND the true lift. Comes back "not significant" - but proves nothing.</text>
+        <!-- properly powered -->
+        <text class="a2upT" x="30" y="196">Right sample</text>
+        <text class="a2upN" x="30" y="214">~32,000 / arm</text>
+        <line class="a2upBar" x1="500" y1="236" x2="640" y2="236" stroke="#4F46E5"/>
+        <circle cx="560" cy="236" r="6" fill="#1E1B3A"/>
+        <text class="a2upN" x="500" y="262">Narrow interval sits clear of zero. Same true lift, now visible - a real win.</text>
+        <rect x="30" y="278" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="a2upN" x="52" y="289" style="fill:#1E1B3A">Underpowered is not "unlucky" - it is a test that was mathematically unable to give a clear answer before it started.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - too small a sample hides a real effect inside a wide interval</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>The tells of a test that cannot be trusted at face value<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>You do not need to recompute anything to smell an over-interpreted test. Watch for these on the slide:</p>
+        <ul>
+          <li><strong>A very wide confidence interval</strong> - the sample was too small; the headline lift is a guess dressed as a finding.</li>
+          <li><strong>No confidence interval at all</strong> - only a point estimate and a green badge. The uncertainty was left off the slide.</li>
+          <li><strong>A tiny sample with a huge claimed lift</strong> - big effects from small tests usually shrink or vanish on a rerun (the "winner's curse").</li>
+          <li><strong>"Not significant" read as "no effect"</strong> - ask whether the test was powered to detect the effect size that would matter to the business.</li>
+          <li><strong>A short run that stopped early on a good day</strong> - which is the peeking trap you met in Session 1, and the subject of the checklist in Session 3.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>Question to ask in a review</strong>
+          "Was this test powered to detect the smallest lift we'd actually act on - and if it came back flat, is the interval tight enough to call it a real 'no'?" That single question separates a confident decision from wishful reading.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PLAYGROUND ============ -->
+  <section class="section" id="playground">
+    <div class="section-kicker">
+      <span class="klabel">Feel the sample-size tradeoff</span>
+      <h2>Why detecting a small lift costs so much traffic <span class="tag concept">try it</span></h2>
+    </div>
+    <p class="lede">This is the exact Lumen test. The baseline is 3.2%, and you are trying to detect a +12.5% relative lift (the jump to 3.6%). Drag the dials and watch the sample size move. Two lessons live in this tool: chasing a smaller lift explodes the traffic you need, and demanding more power (fewer missed winners) costs traffic too. This is why analysts pin down the MDE and power <em>before</em> a test - they are quietly setting its price.</p>
+    <div class="exp-live" data-tool="planner" data-base="3.2" data-mde="12.5" data-alpha="5" data-power="80" data-daily="4000"></div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 3</span>
+      <h2>This week <span class="tag exercise">◐ 30 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Find a real results deck</strong> in your org - any A/B test, experiment, or "we measured the impact" slide. Restate its headline claim as a confidence interval in one sentence: "the true effect is somewhere between X and Y." If the deck does not give you enough to do that, that itself is the finding.</li>
+      <li><strong>Spot whether it was powered.</strong> Was an MDE and power agreed before the test, or did the team run it "until it looked done"? Write one line on which.</li>
+      <li><strong>Play with the planner above.</strong> Halve the MDE and watch the sample size climb. Push power from 80% to 95% and see the cost. Bring the intuition that "detecting small lifts is expensive" to Session 3.</li>
+      <li><strong>Optional:</strong> find one deck that says "no significant difference" and ask whether the interval was tight (a real "no") or wide (an inconclusive test wearing a verdict).</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · A deck says "the new page showed no statistically significant lift." What is the safest reading?</p>
+      <button class="qopt" type="button">A · we proved the new page makes no difference</button>
+      <button class="qopt" type="button">B · the test was run incorrectly</button>
+      <button class="qopt" type="button">C · we did not gather enough evidence to be sure of a lift - it may be a real "no", or the test may have been too small to tell</button>
+      <p class="qwhy">Absence of evidence is not evidence of absence. Check the confidence interval: a tight band near zero is a real "no"; a wide band that crosses zero is an inconclusive, underpowered test.</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">2 · A results slide shows "+0.6pt lift, 95% CI -0.2 to +1.4." How should you act?</p>
+      <button class="qopt" type="button">A · ship it - the lift is positive</button>
+      <button class="qopt" type="button">B · treat it as inconclusive - the interval crosses zero, so a wash or small loss is still consistent with the data</button>
+      <button class="qopt" type="button">C · reject it - the page clearly hurts conversion</button>
+      <p class="qwhy">When the confidence interval straddles zero, the test could not decide direction. The point estimate looks like a win, but the honest range includes "no effect" and even a small loss.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · Lumen's flagship test needs ~32,000 users per arm. Why can't the team just run it for three days?</p>
+      <button class="qopt" type="button">A · at ~4,000 sessions a day it would be badly underpowered, likely returning "not significant" even if the lift is real - a wasted test</button>
+      <button class="qopt" type="button">B · three days is against company policy</button>
+      <button class="qopt" type="button">C · conversion rates only update weekly</button>
+      <p class="qwhy">The +0.4pt MDE at 80% power requires roughly 64,000 users total, about 16-17 days at 4,000/day. A three-day run has too little traffic to detect a lift that small, so it is doomed to be inconclusive before it starts.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">This leader session teaches the reading comprehension for a results deck - the conceptual ~80% of the statistics without the computation. The mechanics (how the numbers are actually calculated) live in Builder Session 2 and the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">MDE, sample size, and power in plain language</span><span class="note">exec framing - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">p-value / significance and the base-rate trap</span><span class="note">what "significant" claims - Part 2</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Confidence intervals, "not significant" ≠ "no effect", underpowered tells</span><span class="note">Part 2 and Part 3</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">365 Data Science - A/B Testing in Python (Kuznetsova)</span><span class="note">the on-point mechanics - Builder Session 2</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Google - The Power of Statistics (GADA C3)</span><span class="note">hypothesis testing and CIs in depth, no math needed here</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">The rule-of-16 and two-proportion sample-size math</span><span class="note">Builder Session 2 - how ~32,000/arm is derived</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Leader Session 2 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>MDE</b><span>Smallest lift you designed to catch. Lumen: +0.4pt (+12.5% relative). A design input, set before the test.</span></div>
+      <div class="cheat-item"><b>Power</b><span>Odds of catching a real lift that size. 80% is standard - a correct test still misses a true winner 1 time in 5.</span></div>
+      <div class="cheat-item"><b>Significance (p&lt;0.05)</b><span>A measure of surprise: less than 1-in-20 that pure luck produced a gap this big. A threshold, not a truth.</span></div>
+      <div class="cheat-item"><b>Confidence interval</b><span>The honest range for the true effect. Width = precision; crossing zero = inconclusive. Always ask for it.</span></div>
+      <div class="cheat-item"><b>"Not significant" ≠ "no effect"</b><span>Absence of evidence is not evidence of absence. A wide interval means the test was too small to decide.</span></div>
+      <div class="cheat-item"><b>Base-rate trap</b><span>Test many long shots and some "significant" wins are flukes. Ask how many things were tested; replicate surprises.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Leader session 2 of 6 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="a1-why-experiments.html">← Prev: Why experiments beat opinions</a> &nbsp;·&nbsp; <a href="a3-trust-checklist.html">Next: The trust checklist →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/exp-live.js?v=1"></script>
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

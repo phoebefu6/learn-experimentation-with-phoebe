@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 10 · Observational causal inference - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 10 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 10 of 10 · capstone</div>
+    <h1>Observational causal inference, <span class="accent">when you cannot run the experiment</span></h1>
+    <p class="sub">The capstone. You will not always be allowed to randomize - the treatment already happened, or it is unethical, or nobody will hold out the budget. This session builds the honest toolkit for causal claims from observational data: DAGs and the backdoor criterion to decide what to adjust for, propensity scores and IPW to de-confound, and doubly robust estimators for a second line of defence. We de-confound Lumen's email-opt-in problem in Python with DoWhy, stress-test it with refutation checks, and close the whole course with a decision table: which method for which question, and why.</p>
+    <div class="chip-row">
+      <span class="chip level">🔴 Hardest</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · DoWhy / EconML</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-16 · DAGs + propensity</span>
+      <span class="a3" style="flex:5">16-40 · De-confound in Python</span>
+      <span class="a4" style="flex:1">40-45 · Capstone wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The honest way to answer an unrandomized question</h2>
+    </div>
+    <p class="lede">Lumen's email opt-in users convert far better than everyone else, and the growth team wants to declare email the hero channel. But opt-in was never randomized - users <em>self-selected</em> on intent. The confounders are obvious once you name them: prior engagement, account tenure, acquisition channel. All three drive both who opts in and who buys. Session 10 is about doing the best you honestly can when the coin flip was not available: draw the causal graph, adjust for the right variables (and never the wrong ones), estimate with propensity methods, and then try hard to break your own answer. It ends the course by mapping every method you have learned to the questions it actually answers.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A notebook that (1) reproduces the inflated naive email "effect" - the b1 confounding lesson, now on real-shaped data, (2) estimates a propensity model and recovers a credible effect with IPW and matching via DoWhy's identify-estimate-refute flow, and (3) runs refutation and sensitivity checks and states honestly what an unmeasured confounder could still do. Plus the capstone decision table for the whole course.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: DAGS + BACKDOOR ============ -->
+  <section class="section" id="dags">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · what to adjust for</span>
+      <h2>DAGs and the backdoor criterion <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">Before you adjust for anything, you draw the assumed causal graph - a directed acyclic graph (DAG). Pearl's <strong>backdoor criterion</strong> tells you what to condition on: block every "backdoor" path from treatment T to outcome Y (paths that start with an arrow <em>into</em> T), and condition on no descendants of T. Confounders open backdoor paths, so you adjust for them. But two kinds of variable must be left alone - conditioning on them <em>creates</em> bias where there was none: colliders and mediators.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left DAG: a confounder points into both treatment and outcome, opening a backdoor path. Right DAG: the same path blocked by adjusting for the confounder. A warning node shows a collider must not be conditioned on.">
+        <style>
+          .dgT { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+          .dgL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .dgN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .dgArr { stroke: #6366F1; stroke-width: 2.5; fill: none; marker-end: url(#dgHead); }
+          .dgBad { stroke: #DC2626; stroke-width: 2.5; fill: none; marker-end: url(#dgHeadBad); }
+          .dgCut { stroke: #84CC16; stroke-width: 4; }
+        </style>
+        <defs>
+          <marker id="dgHead" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#6366F1" stroke-width="1.6"/></marker>
+          <marker id="dgHeadBad" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#DC2626" stroke-width="1.6"/></marker>
+        </defs>
+        <!-- LEFT: open backdoor -->
+        <text class="dgL" x="30" y="30">Backdoor path open (biased)</text>
+        <rect x="120" y="46" width="170" height="38" rx="10" fill="#6B6785"/><text class="dgT" x="136" y="70">Engagement (X)</text>
+        <rect x="30" y="150" width="130" height="38" rx="10" fill="#4F46E5"/><text class="dgT" x="52" y="174">Opt-in T</text>
+        <rect x="250" y="150" width="130" height="38" rx="10" fill="#3730A3"/><text class="dgT" x="272" y="174">Buys Y</text>
+        <path class="dgBad" d="M150,84 C120,112 100,128 88,148"/>
+        <path class="dgBad" d="M258,84 C290,112 305,128 316,148"/>
+        <path class="dgArr" d="M160,169 L248,169"/>
+        <text class="dgN" x="40" y="216" style="fill:#DC2626">T ← X → Y stays open</text>
+        <text class="dgN" x="40" y="234">naive effect = real effect + confounding</text>
+        <!-- RIGHT: blocked -->
+        <text class="dgL" x="490" y="30">Backdoor blocked (adjusted)</text>
+        <rect x="580" y="46" width="170" height="38" rx="10" fill="#6B6785"/><text class="dgT" x="596" y="70">Engagement (X)</text>
+        <rect x="490" y="150" width="130" height="38" rx="10" fill="#4F46E5"/><text class="dgT" x="512" y="174">Opt-in T</text>
+        <rect x="710" y="150" width="130" height="38" rx="10" fill="#3730A3"/><text class="dgT" x="732" y="174">Buys Y</text>
+        <path class="dgBad" d="M610,84 C580,112 560,128 548,148" opacity="0.35"/>
+        <line class="dgCut" x1="556" y1="104" x2="584" y2="130"/>
+        <path class="dgArr" d="M718,84 C750,112 765,128 776,148"/>
+        <path class="dgArr" d="M620,169 L708,169"/>
+        <rect x="470" y="96" width="90" height="26" rx="8" fill="#84CC16"/><text class="dgL" x="482" y="114">adjust X</text>
+        <text class="dgN" x="500" y="216" style="fill:#4F46E5">condition on X → path closed</text>
+        <text class="dgN" x="500" y="234">estimate ≈ real effect (observed confounders only)</text>
+        <!-- collider warning -->
+        <rect x="30" y="270" width="810" height="42" rx="10" fill="#EEF2FF"/>
+        <rect x="46" y="280" width="150" height="24" rx="7" fill="#DC2626"/><text class="dgT" x="58" y="297">⚠ collider / mediator</text>
+        <text class="dgN" x="210" y="297" style="fill:#1E1B3A">A collider (T → C ← Y) or a mediator (T → M → Y) must NOT be conditioned on - doing so OPENS a spurious path and creates bias.</text>
+        <!-- note -->
+        <rect x="30" y="326" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="dgN" x="52" y="337" style="fill:#1E1B3A">The backdoor criterion: block all backdoor paths (arrows into T), condition on no descendants of T. Adjust confounders; leave colliders and mediators alone.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - a confounder opens a backdoor path; adjusting for it closes the path (but never condition on a collider or mediator)</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Why colliders are the trap<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A confounder is a common <em>cause</em> of T and Y - conditioning on it helps. A collider is a common <em>effect</em> of two variables (arrows point into it) - conditioning on it <em>opens</em> a path that was closed, injecting bias. A mediator sits <em>on</em> the causal path (T → M → Y); conditioning on it removes part of the effect you are trying to measure. The lesson: "control for more variables" is not a virtue. You control for the <em>right</em> variables, which only the DAG can tell you.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Classic collider: if Lumen only analyzes shoppers who reached checkout, and both "saw a promo" and "high intent" independently raise the odds of reaching checkout, then conditioning on "reached checkout" makes promo and intent look negatively related among that group - a correlation that exists only because you filtered on their common effect. Selection bias is collider bias in disguise.</p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: PROPENSITY + DR ============ -->
+  <section class="section" id="propensity">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · how to adjust</span>
+      <h2>Propensity scores, IPW, and doubly robust <span class="tag concept">5 min live</span></h2>
+    </div>
+    <p class="lede">Once the DAG says which confounders X to adjust for, the propensity score gives you a clean way to do it. The propensity is <code>e(X) = P(T=1 | X)</code> - each unit's modelled probability of being treated given its covariates (Rosenbaum &amp; Rubin 1983). Two ways to use it: <strong>matching</strong> (pair treated and control units with similar scores) and <strong>inverse-probability weighting</strong> (IPW - weight each unit by 1/e(X) so the treated and control groups become comparable in aggregate). <strong>Doubly robust</strong> estimators (AIPW, TMLE) combine a propensity model and an outcome model and stay consistent if <em>either</em> one is correct - two shots on goal.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Before adjustment the treated and control groups have very different covariate distributions; after inverse-probability weighting the two distributions overlap and balance.">
+        <style>
+          .pwL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .pwN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .pwT { fill: #4F46E5; }
+          .pwC { fill: #A5B4FC; }
+          .pwAx { stroke: #C7C4DE; stroke-width: 1.5; }
+          .pwArr { stroke: #6B6785; stroke-width: 2.5; fill: none; marker-end: url(#pwHead); }
+        </style>
+        <defs>
+          <marker id="pwHead" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#6B6785" stroke-width="1.8"/></marker>
+        </defs>
+        <!-- BEFORE -->
+        <text class="pwL" x="30" y="28">Before: imbalanced on engagement (X)</text>
+        <line class="pwAx" x1="40" y1="150" x2="360" y2="150"/>
+        <!-- control skewed low -->
+        <rect class="pwC" x="60"  y="110" width="20" height="40"/>
+        <rect class="pwC" x="86"  y="86"  width="20" height="64"/>
+        <rect class="pwC" x="112" y="100" width="20" height="50"/>
+        <rect class="pwC" x="138" y="126" width="20" height="24"/>
+        <!-- treated skewed high -->
+        <rect class="pwT" x="240" y="126" width="20" height="24"/>
+        <rect class="pwT" x="266" y="104" width="20" height="46"/>
+        <rect class="pwT" x="292" y="84"  width="20" height="66"/>
+        <rect class="pwT" x="318" y="112" width="20" height="38"/>
+        <text class="pwN" x="60"  y="170" style="fill:#4338CA">control (low engagement)</text>
+        <text class="pwN" x="238" y="170" style="fill:#4F46E5">treated (high engagement)</text>
+        <text class="pwN" x="60" y="200" style="fill:#DC2626">groups not comparable - naive diff is confounded</text>
+        <!-- arrow -->
+        <path class="pwArr" d="M380,120 L470,120"/>
+        <rect x="392" y="80" width="70" height="26" rx="8" fill="#84CC16"/><text class="pwL" x="404" y="98" style="fill:#1A2E05">1/e(X)</text>
+        <!-- AFTER -->
+        <text class="pwL" x="500" y="28">After IPW: distributions overlap</text>
+        <line class="pwAx" x1="510" y1="150" x2="850" y2="150"/>
+        <!-- both centered, overlapping -->
+        <rect class="pwC" x="560" y="104" width="18" height="46"/>
+        <rect class="pwT" x="580" y="98"  width="18" height="52"/>
+        <rect class="pwC" x="620" y="86"  width="18" height="64"/>
+        <rect class="pwT" x="640" y="90"  width="18" height="60"/>
+        <rect class="pwC" x="700" y="100" width="18" height="50"/>
+        <rect class="pwT" x="720" y="96"  width="18" height="54"/>
+        <rect class="pwC" x="770" y="118" width="18" height="32"/>
+        <rect class="pwT" x="790" y="114" width="18" height="36"/>
+        <text class="pwN" x="560" y="170" style="fill:#1E1B3A">reweighted groups share the same X distribution</text>
+        <text class="pwN" x="560" y="200" style="fill:#4F46E5">now the difference estimates the effect</text>
+        <!-- note squares -->
+        <rect x="30" y="272" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="pwN" x="52" y="283" style="fill:#1E1B3A">IPW weights each unit by 1/e(X) so treated and control become balanced on the confounders. Check covariate balance (standardized mean differences) after weighting.</text>
+        <rect x="30" y="296" width="14" height="14" rx="3" fill="#DC2626"/>
+        <text class="pwN" x="52" y="307" style="fill:#1E1B3A">Extreme propensity scores → huge weights → unstable estimates. Trim or clip weights, and check positivity: every unit needs 0 &lt; e(X) &lt; 1.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - inverse-probability weighting reshapes two imbalanced groups into balance on the confounder</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>The honest ceiling on any observational estimate<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Adjustment - propensity, IPW, matching, doubly robust - only fixes the confounders you <em>observed and included</em>. The identifying assumption, unconfoundedness (no unmeasured confounders), is <strong>untestable</strong>: nothing in the data can confirm it. That is the permanent gap between observational and experimental evidence. Randomization balances even the confounders you never measured or imagined; adjustment cannot. So an observational estimate is always a conditional claim - "the effect is X, assuming we captured the confounders that matter."</p>
+        <div class="callout tip">
+          <strong>Doubly robust is insurance, not a cure</strong>
+          AIPW/TMLE give you two chances - consistent if either the propensity or the outcome model is right. That protects against <em>modelling</em> error. It does nothing about an <em>unmeasured</em> confounder. Two shots on goal, same goalposts.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Watch the naive email effect inflate <span class="tag demo">★ 7 min · everyone</span></h2>
+    </div>
+    <p class="lede">Straight callback to b1, now on Lumen's email data. Opt-in users self-select on intent, so the raw opt-in-minus-non-opt-in conversion gap is confounded. Quantify how wrong the naive number is before we fix it.</p>
+    <div class="steps">
+      <div class="step"><p>Load the opt-in dataset with the confounders the DAG named - prior engagement, tenure, acquisition channel:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_naive_effect.py</span>
+<pre>import pandas as pd, numpy as np
+
+df = pd.read_parquet("lumen_email_optin.parquet")
+# columns: opt_in (T), converted (Y), prior_engagement, tenure_days, acq_channel
+confounders = ["prior_engagement", "tenure_days", "acq_channel"]
+
+naive = df.loc[df.opt_in==1, "converted"].mean() - df.loc[df.opt_in==0, "converted"].mean()
+print(f"Naive opt-in 'effect' = {naive:.4f}")   # large - looks like email is magic</pre>
+        </div>
+      </div>
+      <div class="step"><p>Show the groups are not comparable to begin with - the opt-in group was already more engaged:</p>
+        <div class="prompt-box good">
+          <span class="label">imbalance.py</span>
+<pre>print(df.groupby("opt_in")[["prior_engagement", "tenure_days"]].mean())
+# opt-in users start higher on engagement AND tenure -> confounded comparison
+# this is the b1 lesson: naive diff = real effect + selection on intent</pre>
+        </div>
+      </div>
+      <div class="step"><p>The naive gap credits email for conversions that high-intent users would have made anyway. Just like b1's self-selection demo - only now we cannot rerun it as a coin flip, so we have to adjust our way to an honest number.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>De-confound with propensity, IPW, and DoWhy <span class="tag demo">★ 9 min · everyone</span></h2>
+    </div>
+    <p class="lede">Fit a propensity model, use it to weight or match, and recover a credible effect. We drive it through DoWhy's identify-estimate-refute flow so the causal assumptions are explicit, not buried in a regression call.</p>
+    <div class="steps">
+      <div class="step"><p>Estimate the propensity e(X) and de-confound by hand with IPW:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2a_ipw.py</span>
+<pre>from sklearn.linear_model import LogisticRegression
+X = pd.get_dummies(df[confounders], drop_first=True)
+
+e = LogisticRegression(max_iter=1000).fit(X, df.opt_in).predict_proba(X)[:, 1]
+e = np.clip(e, 0.02, 0.98)                         # trim extremes -> stable weights
+
+w = np.where(df.opt_in==1, 1/e, 1/(1-e))           # inverse-probability weights
+ipw = (np.average(df.converted[df.opt_in==1], weights=w[df.opt_in==1])
+       - np.average(df.converted[df.opt_in==0], weights=w[df.opt_in==0]))
+print(f"IPW effect = {ipw:.4f}   vs naive {naive:.4f}")   # much smaller, credible</pre>
+        </div>
+      </div>
+      <div class="step"><p>Do it properly with DoWhy - identify, estimate, and keep the model for refutation:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2b_dowhy.py</span>
+<pre>from dowhy import CausalModel
+
+model = CausalModel(data=df, treatment="opt_in", outcome="converted",
+                    common_causes=confounders)
+est_and = model.identify_effect(proceed_when_unidentifiable=False)   # backdoor set
+estimate = model.estimate_effect(
+    est_and, method_name="backdoor.propensity_score_weighting")
+print("DoWhy ATE:", estimate.value)
+# EconML alt: LinearDML / DRLearner for a doubly robust estimate</pre>
+        </div>
+      </div>
+      <div class="step"><p>Check covariate balance after weighting (standardized mean differences should shrink toward zero), and confirm positivity - no unit pinned at e(X)≈0 or 1. The de-confounded effect will be a fraction of the naive one; that shrinkage is the confounding you just removed.</p></div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>This is the fix for "our email opt-in users convert 3x better, so email is our best channel." After de-confounding, the honest lift is a fraction of the raw gap - most of the 3x was who those users already were. That single correction can redirect a real slice of Lumen's $4M budget away from a phantom.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>Try to break it - refutation and sensitivity <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">A causal estimate you have not attacked is a guess. DoWhy's refuters stress-test whether your number survives deliberate sabotage - and then you state, out loud, what an unmeasured confounder could still do.</p>
+    <div class="steps">
+      <div class="step"><p>Run the standard refuters - a good estimate barely moves under placebo, and holds under a random common cause:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3a_refute.py</span>
+<pre># placebo treatment: replace opt_in with random noise -> effect should collapse to ~0
+placebo = model.refute_estimate(est_and, estimate,
+            method_name="placebo_treatment_refuter", placebo_type="permute")
+print(placebo)   # new effect ~0 => your pipeline is not inventing effects
+
+# random common cause: add an irrelevant covariate -> estimate should be stable
+rcc = model.refute_estimate(est_and, estimate,
+            method_name="random_common_cause")
+print(rcc)       # estimate unchanged => robust to a spurious added confounder</pre>
+        </div>
+      </div>
+      <div class="step"><p>Sensitivity to an <em>unobserved</em> confounder - how strong would one need to be to erase your effect?</p>
+        <div class="prompt-box good">
+          <span class="label">demo3b_sensitivity.py</span>
+<pre># subset (data) refuter: effect stable on random subsamples?
+subset = model.refute_estimate(est_and, estimate,
+            method_name="data_subset_refuter", subset_fraction=0.8)
+print(subset)
+
+# then the honest sentence: name a plausible unmeasured confounder (e.g. purchase
+# intent we never logged) and state that unconfoundedness is UNTESTABLE - this
+# estimate holds only if we captured the confounders that matter.</pre>
+        </div>
+      </div>
+      <div class="step"><p>Passing the refuters is necessary, not sufficient. They catch pipeline errors and spurious signal; they cannot rule out a confounder you never measured. Report the estimate, the refutation results, <em>and</em> the named residual risk - that trio is what makes an observational claim defensible.</p></div>
+    </div>
+    <div class="callout tip">
+      <strong>State the residual risk by name</strong>
+      "The de-confounded lift is X; it survives placebo and random-common-cause refutation; it would be overturned only by an unmeasured confounder at least as strong as prior engagement - for example, latent purchase intent we do not log." That sentence is the difference between honest observational work and a number pretending to be an experiment.
+    </div>
+  </section>
+
+  <!-- ============ CAPSTONE WRAP ============ -->
+  <section class="section" id="capstone">
+    <div class="section-kicker">
+      <span class="klabel">Course capstone</span>
+      <h2>The decision table - which method for which question <span class="tag concept">wrap</span></h2>
+    </div>
+    <p class="lede">Ten sessions, one skill: match the method to the question and the constraints. Here is the whole course as a decision table for Lumen's real questions. The rule that ties it together is at the bottom.</p>
+    <table class="clean">
+      <thead><tr><th>Lumen question</th><th>Can you randomize?</th><th>Method</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>New product-page layout lifts checkout?</td><td>Yes - per user</td><td><b>A/B test</b> (b1-b7)</td><td>Coin-flip assignment; cleanest evidence. Power it, guard SRM, use CUPED to cut variance.</td></tr>
+        <tr><td>Two changes at once, do they interact?</td><td>Yes - per user</td><td><b>Multivariate / factorial</b> (b5)</td><td>Estimates main effects and interactions in one test.</td></tr>
+        <tr><td>Stop early without inflating error?</td><td>Yes - per user</td><td><b>Sequential / mSPRT</b> (b6)</td><td>Always-valid inference lets you peek honestly.</td></tr>
+        <tr><td>CTV / TV brand burst drives revenue?</td><td>Region only</td><td><b>Geo + synthetic control</b> (b8)</td><td>Cannot randomize a person's TV; build a synthetic twin from donor regions.</td></tr>
+        <tr><td>Loyalty program rolled out by region?</td><td>No - staggered rollout</td><td><b>Difference-in-differences</b> (b9)</td><td>Natural experiment; parallel trends + event study, mind staggered-adoption bias.</td></tr>
+        <tr><td>Does email opt-in cause conversion?</td><td>No - self-selected</td><td><b>Propensity / IPW / DR</b> (b10)</td><td>De-confound on observed confounders; state the untestable-unconfoundedness caveat.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout win">
+      <strong>The whole course in one line</strong>
+      Randomize when you can, adjust honestly when you cannot. An experiment answers the question; an observational method answers it conditionally, and the mark of a good analyst is naming that condition out loud.
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">After the course</span>
+      <h2>Take it further <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Add a hidden confounder and hide it.</strong> Simulate an unobserved driver of both opt-in and conversion, drop it from the adjustment set, and show the de-confounded estimate is still biased - the honest ceiling, demonstrated.</li>
+      <li><strong>Condition on a collider on purpose.</strong> Filter to shoppers who reached checkout and watch a spurious relationship appear. This is why "add more controls" is wrong.</li>
+      <li><strong>Compare estimators.</strong> Put IPW, matching, and an EconML doubly-robust learner side by side on the same data; explain where they agree and diverge.</li>
+      <li><strong>Capstone:</strong> take one real question from your own work, place it in the decision table, and write the one-paragraph analysis plan - method, assumptions, and the residual risk you would name.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · The backdoor criterion says you should adjust for a variable when it...</p>
+      <button class="qopt" type="button">A · sits on the causal path from T to Y (a mediator)</button>
+      <button class="qopt" type="button">B · is a common cause of T and Y, opening a backdoor path</button>
+      <button class="qopt" type="button">C · is a common effect of T and Y (a collider)</button>
+      <p class="qwhy">Confounders are common causes that open backdoor paths - block them by conditioning. Conditioning on a mediator removes part of the real effect; conditioning on a collider opens a spurious path and creates bias.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · Inverse-probability weighting de-confounds by...</p>
+      <button class="qopt" type="button">A · dropping units with extreme covariate values</button>
+      <button class="qopt" type="button">B · matching each treated unit to its nearest control</button>
+      <button class="qopt" type="button">C · weighting each unit by 1/e(X) so treated and control become balanced on the confounders</button>
+      <p class="qwhy">IPW reweights by the inverse propensity so the two groups share the same covariate distribution. Watch for extreme scores (huge, unstable weights) - trim them and check positivity.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · Why is an observational causal estimate weaker than a randomized one, even after doubly robust adjustment?</p>
+      <button class="qopt" type="button">A · adjustment fixes only observed confounders; unconfoundedness is untestable, and randomization balances even unmeasured ones</button>
+      <button class="qopt" type="button">B · observational datasets are always smaller</button>
+      <button class="qopt" type="button">C · doubly robust estimators are biased by construction</button>
+      <p class="qwhy">Doubly robust protects against modelling error (consistent if either model is right) but does nothing about an unmeasured confounder. Only randomization balances confounders you never observed - the permanent gap.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">The capstone teaches the working core of observational causal inference and the discipline of stating your assumptions. The deep identification theory and the graphical formalism live in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Confounding, backdoor/DAGs, propensity, IPW, doubly robust</span><span class="note">Parts 1-2 + all three build-alongs on Lumen's email opt-in</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Refutation, sensitivity, and when to trust observational work</span><span class="note">build-along 3 + the course decision table</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Crash Course in Causality (UPenn, Roy)</span><span class="note">DAGs, propensity, IPTW in depth - the formal treatment</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Brady Neal - Intro to Causal Inference</span><span class="note">do-calculus and the graphical framing - concept-level here</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Causal Data Science with DAGs (Hunermund, Udemy)</span><span class="note">the Pearlian half - extends Part 1</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 10 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>DAG first</b><span>Draw the assumed causal graph before adjusting. It decides what to condition on - intuition does not.</span></div>
+      <div class="cheat-item"><b>Backdoor criterion</b><span>Block all backdoor paths (arrows into T); condition on no descendants of T. Adjust confounders only.</span></div>
+      <div class="cheat-item"><b>Never a collider/mediator</b><span>Conditioning on a common effect (collider) or a mediator CREATES bias. More controls ≠ better.</span></div>
+      <div class="cheat-item"><b>Propensity + IPW</b><span>e(X)=P(T=1|X). Weight by 1/e(X) to balance groups; trim extreme weights; check positivity.</span></div>
+      <div class="cheat-item"><b>Doubly robust</b><span>AIPW/TMLE consistent if propensity OR outcome model is right. Insurance against modelling error only.</span></div>
+      <div class="cheat-item"><b>The honest ceiling</b><span>Adjustment fixes observed confounders; unconfoundedness is untestable. Randomize when you can, adjust honestly when you cannot.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 10 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b9-difference-in-differences.html">← Prev: Difference-in-differences</a> &nbsp;·&nbsp; <a href="../index.html">Next: All sessions →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

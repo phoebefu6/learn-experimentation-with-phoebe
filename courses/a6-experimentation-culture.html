@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leader session 6 · Building an experimentation culture - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Leader session 6 of 6</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Leader session 6 of 6 · capstone</div>
+    <h1>Building an experimentation culture, <span class="accent">the leader's job</span></h1>
+    <p class="sub">You have learned to read a test, trust a test, and know which test fits which question. The last thing a leader owns is the system around the tests - the culture that decides what "winning" means before a test runs, protects the things that must not break, pre-commits to a decision, and celebrates good tests rather than only good results. This capstone hands you the four levers and the anti-patterns to watch for, then puts you in the chair: commission Lumen's experimentation roadmap. No math, no code.</p>
+    <div class="chip-row">
+      <span class="chip level">🟡 Core</span>
+      <span class="chip audience">Leaders · C-level / PM / marketing</span>
+      <span class="chip audience">No code</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:4">3-24 · OEC, guardrails, decisions</span>
+      <span class="a3" style="flex:4">24-40 · Velocity &amp; anti-patterns</span>
+      <span class="a4" style="flex:1">40-45 · Capstone</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>Good tests are a habit, not an event</h2>
+    </div>
+    <p class="lede">A single well-run experiment is worth something. An organization that runs a hundred a year, each one honest, each one feeding the next decision, is worth a great deal more - and that is a leadership artifact, not a statistical one. The statistics are settled by Sessions 1 to 5. What is left is the part only you can build: agreeing on the success metric up front, protecting the numbers that must not break, deciding in advance what a result will mean, and building a team that treats a failed test as cheap learning rather than a black mark. This capstone is about that system.</p>
+    <div class="legend">
+      <span class="pill solid">Live - covered in session</span>
+      <span class="pill light">Self-study - read after</span>
+      <span class="pill amber">★ The one big idea</span>
+      <span class="pill inkpill">The case: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      Four levers you can pull on Monday: the <em>OEC</em> (one agreed success metric per test, chosen before it runs), <em>guardrail metrics</em> (the things that must not get worse), a pre-committed <em>decision framework</em> (ship / iterate / kill), and a view of <em>experiment velocity and ROI</em> that rewards good tests over lucky wins. Plus the org anti-patterns that quietly rot all four. You finish by commissioning Lumen's roadmap, closing the loop back to Session 1's stakes-and-uncertainty grid.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: OEC, GUARDRAILS, DECISION ============ -->
+  <section class="section" id="oec">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the one big idea</span>
+      <h2>Decide what winning means before the test runs <span class="tag concept">9 min live</span></h2>
+    </div>
+    <p class="lede">The most common way a test goes wrong has nothing to do with statistics. It is that nobody agreed, before the test, what result would count as a win - so afterwards everyone finds the metric that flatters their side. The fix is to name one <strong>Overall Evaluation Criterion (OEC)</strong> up front: the single number this test is judged on. Then name the <strong>guardrails</strong> - the metrics that must not get worse even if the OEC wins. And then pre-commit to what each outcome triggers: ship, iterate, or kill.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A dashboard concept: one large headline OEC metric passing, above a row of four guardrail metrics each marked pass or fail. One guardrail fails, so despite the OEC winning the test is not shipped.">
+        <style>
+          .obT { font: 700 14px Inter, sans-serif; fill: #FFFFFF; }
+          .obL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .obBig { font: 800 30px Inter, sans-serif; fill: #FFFFFF; }
+          .obN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .obPass { font: 700 12px Inter, sans-serif; fill: #1A2E05; }
+          .obFail { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+        </style>
+        <!-- OEC headline -->
+        <text class="obL" x="40" y="34">The OEC: one headline metric this test is judged on</text>
+        <rect x="40" y="48" width="800" height="96" rx="14" fill="#3730A3"/>
+        <text class="obT" x="64" y="80">Checkout conversion rate (OEC)</text>
+        <text class="obBig" x="64" y="122">3.2% → 3.6%</text>
+        <rect x="660" y="72" width="150" height="48" rx="10" fill="#84CC16"/>
+        <text class="obPass" x="690" y="102">✓ OEC wins</text>
+        <!-- guardrails row -->
+        <text class="obL" x="40" y="180">Guardrails: must not get worse</text>
+        <rect x="40" y="196" width="185" height="96" rx="12" fill="#EEF2FF"/>
+        <text class="obL" x="58" y="224">Page-load latency</text>
+        <rect x="58" y="240" width="90" height="32" rx="8" fill="#DC2626"/><text class="obFail" x="74" y="262">✗ FAIL</text>
+        <text class="obN" x="58" y="288" style="fill:#DC2626">+180ms slower</text>
+        <rect x="240" y="196" width="185" height="96" rx="12" fill="#EEF2FF"/>
+        <text class="obL" x="258" y="224">Refund rate</text>
+        <rect x="258" y="240" width="90" height="32" rx="8" fill="#84CC16"/><text class="obPass" x="274" y="262">✓ PASS</text>
+        <text class="obN" x="258" y="288" style="fill:#6B6785">flat</text>
+        <rect x="440" y="196" width="185" height="96" rx="12" fill="#EEF2FF"/>
+        <text class="obL" x="458" y="224">Add-to-cart rate</text>
+        <rect x="458" y="240" width="90" height="32" rx="8" fill="#84CC16"/><text class="obPass" x="474" y="262">✓ PASS</text>
+        <text class="obN" x="458" y="288" style="fill:#6B6785">+0.2pt</text>
+        <rect x="640" y="196" width="185" height="96" rx="12" fill="#EEF2FF"/>
+        <text class="obL" x="658" y="224">Unsubscribe rate</text>
+        <rect x="658" y="240" width="90" height="32" rx="8" fill="#84CC16"/><text class="obPass" x="674" y="262">✓ PASS</text>
+        <text class="obN" x="658" y="288" style="fill:#6B6785">flat</text>
+        <!-- verdict note -->
+        <rect x="40" y="312" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="obN" x="62" y="323" style="fill:#1E1B3A">Verdict: OEC won but a guardrail failed → do NOT ship as-is. Fix the latency regression, then re-test. A win that breaks a guardrail is not a win.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - one headline OEC over a row of guardrails; a broken guardrail vetoes the win</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>The OEC and why it must be singular<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>The Overall Evaluation Criterion is the one metric a test is graded on, agreed before launch. Its whole power is that it is singular and pre-committed - it takes away the after-the-fact temptation to cherry-pick whichever number moved.</p>
+        <ul>
+          <li><strong>One metric, chosen up front</strong> - for Lumen's page test, checkout conversion. Not "conversion, or revenue, or time-on-page, whichever looks good later".</li>
+          <li><strong>It should capture long-term value, not a vanity spike</strong> - clicks can rise while revenue falls. A good OEC is the number you would actually stake the business on.</li>
+          <li><strong>Agreed by the people who will act on it</strong> - so the result is binding, not debatable.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen's hero-first page test names checkout conversion as its OEC before launch - target lift from 3.2% to 3.6%. When the test comes in at exactly that, there is no argument about whether it "worked", because the bar was set in advance. That is the OEC doing its job.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>Guardrails and the pre-committed decision<span class="mini">4 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Guardrail metrics are the things that must not get worse even when the OEC wins. They stop a team from buying a headline number at the cost of something quietly expensive.</p>
+        <ul>
+          <li><strong>Lumen's guardrails</strong> - page-load latency, refund rate, add-to-cart rate, unsubscribe rate. A conversion win that slows the page by 180ms is not shipped until the latency is fixed.</li>
+          <li><strong>The decision, pre-committed</strong> - before the test, agree what each outcome triggers: <em>ship</em> (OEC wins, guardrails hold), <em>iterate</em> (promising but not conclusive, or a guardrail wobbled), <em>kill</em> (flat or negative). Deciding in advance removes the emotion afterwards.</li>
+          <li><strong>Absence of evidence is not evidence of absence</strong> - a "not significant" result from Session 2 usually means iterate or re-power, not "the idea is dead".</li>
+        </ul>
+        <div class="callout tip">
+          <strong>The one sentence to institutionalize</strong>
+          "What is the OEC, what are the guardrails, and what will each result make us do?" Ask it before every test and you have installed most of an experimentation culture with a single question.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: VELOCITY, ROI, ANTI-PATTERNS ============ -->
+  <section class="section" id="velocity">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the system</span>
+      <h2>Velocity, the ROI of failure, and what rots a culture <span class="tag concept">7 min live</span></h2>
+    </div>
+    <p class="lede">Most experiments fail - the change does not move the OEC, or it moves it the wrong way. In a healthy culture that is the point, not a problem. Each cheap failed test buys a piece of knowledge and steers the next bet. The return on experimentation comes from volume plus honesty: run many tests, learn from all of them, ship the few real winners. The leader's job is to make failing safe, keep the loop turning, and stamp out the behaviours that quietly turn the whole system into theatre.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A circular experiment lifecycle loop with six stages: hypothesis, design, run, decide, learn, and back to repeat. The learn stage feeds the next hypothesis.">
+        <style>
+          .lcT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .lcL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .lcN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .lcA { stroke: #6366F1; stroke-width: 3; fill: none; marker-end: url(#lcAh); }
+        </style>
+        <defs>
+          <marker id="lcAh" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#6366F1" stroke-width="1.8"/></marker>
+        </defs>
+        <!-- six nodes around a loop -->
+        <ellipse cx="150" cy="90" rx="92" ry="40" fill="#3730A3"/><text class="lcT" x="112" y="95">Hypothesis</text>
+        <ellipse cx="440" cy="70" rx="82" ry="40" fill="#4F46E5"/><text class="lcT" x="410" y="75">Design</text>
+        <ellipse cx="730" cy="90" rx="82" ry="40" fill="#4F46E5"/><text class="lcT" x="712" y="95">Run</text>
+        <ellipse cx="730" cy="250" rx="82" ry="40" fill="#4F46E5"/><text class="lcT" x="702" y="255">Decide</text>
+        <ellipse cx="440" cy="270" rx="82" ry="40" fill="#3730A3"/><text class="lcT" x="414" y="275">Learn</text>
+        <ellipse cx="150" cy="250" rx="92" ry="40" fill="#6366F1"/><text class="lcT" x="118" y="255">Repeat</text>
+        <!-- arrows around the loop -->
+        <path class="lcA" d="M242,82 L352,72"/>
+        <path class="lcA" d="M522,74 L642,86"/>
+        <path class="lcA" d="M730,130 L730,206"/>
+        <path class="lcA" d="M648,258 L526,268"/>
+        <path class="lcA" d="M358,272 L246,258"/>
+        <path class="lcA" d="M150,210 L150,132"/>
+        <!-- center note -->
+        <rect x="300" y="150" width="280" height="44" rx="10" fill="#EEF2FF"/>
+        <text class="lcN" x="318" y="168" style="fill:#1E1B3A">Most loops end in "kill" - and that is</text>
+        <text class="lcN" x="318" y="185" style="fill:#1E1B3A">cheap learning that steers the next bet.</text>
+        <!-- lime note -->
+        <rect x="60" y="316" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="lcN" x="82" y="327" style="fill:#1E1B3A">Velocity is the flywheel: the faster the loop turns and the more honestly it reports, the more the whole org learns. Reward good tests, not just wins.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - hypothesis to design to run to decide to learn, and around again</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>The ROI of experimentation is mostly learning<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>If you only counted the winning tests, experimentation would look inefficient - most tests do not win. That framing misses the point. The value is in the portfolio: cheap failures that stop you shipping expensive mistakes, plus the occasional real winner that pays for all of them.</p>
+        <ul>
+          <li><strong>Most tests fail, by design</strong> - if nearly all your tests win, you are testing only safe bets and learning little. A healthy program has plenty of flat and negative results.</li>
+          <li><strong>Failures are cheap insurance</strong> - a $32,000-per-arm test that kills a bad idea saved you from rolling that idea out to everyone.</li>
+          <li><strong>Reward the test, not the outcome</strong> - a well-designed test that returned a clean "no" is a success. Celebrating only positive results teaches teams to game the metric.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen's growth team runs about 40 tests a year. Roughly 8 ship, a handful iterate, the rest are killed. The CMO reports the program by learnings banked and mistakes avoided, not by win rate - which is exactly why the team keeps proposing bold, risky tests instead of safe ones.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>The org anti-patterns that rot experimentation<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Every failure mode here is cultural, not statistical - which means only a leader can fix it.</p>
+        <ul>
+          <li><strong>The HiPPO override</strong> - the Highest-Paid Person's Opinion overturns a clean result because they do not like it. Kills the incentive to test honestly. If you commission an experiment, you agree to be bound by it.</li>
+          <li><strong>P-hacking to a win</strong> - slicing the data until some segment looks significant, then reporting that. The peeking trap from Session 1, dressed up. Pre-commit the OEC and the analysis.</li>
+          <li><strong>Celebrating only positive results</strong> - if wins get applause and honest "no" results get silence, teams learn to manufacture wins. Reward the quality of the test.</li>
+          <li><strong>No pre-committed decision</strong> - running a test with no agreement on what the outcome triggers, so the result gets argued away.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>The leader's standing rule</strong>
+          The person who commissions the test does not get to veto it afterwards. That single commitment defends against most of these at once.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ CAPSTONE EXERCISE ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Capstone · put it together</span>
+      <h2>Commission Lumen's experimentation roadmap <span class="tag exercise">◐ 30 min</span></h2>
+    </div>
+    <p class="lede">This is the whole leader track in one exercise. Lumen's CMO must reallocate a $4M media budget defensibly across 9 channels. Play the leader who commissions the evidence.</p>
+    <ul>
+      <li><strong>Pick 3 decisions</strong> from the $4M budget question. For example: (a) does paid search deserve its 24% share, or is it mostly demand Lumen already has; (b) should the CTV line at 8% grow; (c) is the new hero-first product page worth shipping site-wide.</li>
+      <li><strong>Assign each to ship / pilot / experiment</strong> using Session 1's stakes-and-uncertainty grid. High stakes and high uncertainty earns a full experiment; high stakes but confident earns a pilot or staged rollout; low stakes and reversible just ships.</li>
+      <li><strong>Match each experiment to its tool.</strong> Paid search incrementality wants a holdout (Session 4). CTV wants a geo test across the 9 regions (Session 4). The product page wants a user-level A/B at ~32,000 per arm (Sessions 2 to 3). If a change already rolled out unevenly, reach for a quasi-experiment (Session 5).</li>
+      <li><strong>Name the OEC and guardrails for the biggest one.</strong> For the product-page test: OEC = checkout conversion (target 3.2% to 3.6%); guardrails = page-load latency, refund rate, add-to-cart rate, unsubscribe rate. State the pre-committed decision: ship if the OEC wins and guardrails hold, iterate if inconclusive, kill if flat or negative.</li>
+      <li><strong>Write the one-paragraph commission.</strong> Hand it to your team as if it were real: what you are testing, why it earns an experiment, the tool, the OEC and guardrails, and what each result will make you do. That paragraph is the artifact of an experimentation leader.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · Why name the OEC before the test runs rather than after?</p>
+      <button class="qopt" type="button">A · it is required by the software</button>
+      <button class="qopt" type="button">B · a single, pre-committed metric removes the after-the-fact temptation to cherry-pick whichever number moved</button>
+      <button class="qopt" type="button">C · so the test can be shorter</button>
+      <p class="qwhy">The OEC's power is that it is singular and agreed up front. Choosing the metric after seeing the data is how p-hacking and motivated reasoning creep in.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · Lumen's page test lifts conversion to target, but page-load latency gets 180ms worse. What should happen?</p>
+      <button class="qopt" type="button">A · ship it, the OEC won</button>
+      <button class="qopt" type="button">B · kill the whole idea forever</button>
+      <button class="qopt" type="button">C · do not ship as-is - a guardrail failed; fix the latency and re-test</button>
+      <p class="qwhy">Guardrails are the metrics that must not get worse even when the OEC wins. A conversion win bought with a latency regression is not a win until the guardrail is restored.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · Most of Lumen's tests come back flat or negative. What does that tell a good leader?</p>
+      <button class="qopt" type="button">A · the program is healthy - failures are cheap learning, and a high win rate would mean only safe bets are being tested</button>
+      <button class="qopt" type="button">B · the team is incompetent and should be replaced</button>
+      <button class="qopt" type="button">C · experimentation does not work for this company</button>
+      <p class="qwhy">Most experiments fail by design, and that is the point. The ROI comes from cheap failures that prevent expensive mistakes plus the occasional real winner. Reward good tests, not just wins.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">This capstone distills the culture chapters of the experimentation literature - the part the technical courses assume a leader already owns. It covers ~80% of the conceptual content; the rest lives in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">The OEC - one agreed success metric per test, chosen up front</span><span class="note">exec framing - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Guardrail metrics and the pre-committed ship / iterate / kill decision</span><span class="note">the dashboard concept - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Experiment velocity, the ROI of failure, org anti-patterns</span><span class="note">the lifecycle loop - Part 2</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Capstone - commission Lumen's roadmap from the $4M budget</span><span class="note">closes the loop to Session 1</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Kohavi, Tang &amp; Xu - Trustworthy Online Controlled Experiments</span><span class="note">the culture, OEC, and guardrail chapters - the industry bible</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">The full builder track (b1-b10)</span><span class="note">the statistics behind every tool you now know how to commission</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Leader Session 6 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>OEC</b><span>Overall Evaluation Criterion: the one metric a test is judged on, agreed before it runs. Singular and pre-committed on purpose.</span></div>
+      <div class="cheat-item"><b>Guardrail metrics</b><span>The numbers that must not get worse even if the OEC wins - latency, refunds, unsubscribes. A win that breaks one is not shipped.</span></div>
+      <div class="cheat-item"><b>Decision framework</b><span>Ship / iterate / kill, pre-committed before launch so the result is binding, not debatable.</span></div>
+      <div class="cheat-item"><b>Velocity &amp; ROI</b><span>Most tests fail, and that is the point. Value = cheap failures avoided + rare real winners. Reward good tests, not just wins.</span></div>
+      <div class="cheat-item"><b>Anti-patterns</b><span>HiPPO overrides, p-hacking to a win, celebrating only positive results, no pre-committed decision. All cultural, all yours to fix.</span></div>
+      <div class="cheat-item"><b>The standing rule</b><span>Whoever commissions the test does not get to veto it afterwards. One commitment that defends against most anti-patterns at once.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Leader session 6 of 6 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="a5-when-you-cant-randomize.html">← Prev: When you can't randomize</a> &nbsp;·&nbsp; <a href="b1-potential-outcomes.html">Next: Start the builder track: Potential outcomes →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

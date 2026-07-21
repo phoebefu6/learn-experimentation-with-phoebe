@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 9 · Difference-in-differences - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 9 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 9 of 10</div>
+    <h1>Difference-in-differences, <span class="accent">and the trend you have to trust</span></h1>
+    <p class="sub">When a change rolls out to some regions before others, you get a natural experiment for free - if you analyze it honestly. Difference-in-differences compares the change over time in a treated group against the change in a control, differencing out fixed group gaps and shared time shocks. This session builds DiD three ways in Python on Lumen's staggered loyalty rollout - by hand, as a regression, and as two-way fixed effects - then codes the event-study plot that tests its one load-bearing assumption. You will also meet the modern critique that broke naive TWFE.</p>
+    <div class="chip-row">
+      <span class="chip level">🔴 Hardest</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · linearmodels</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-16 · DiD + parallel trends</span>
+      <span class="a3" style="flex:5">16-40 · Build it in Python</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>Two differences beat one</h2>
+    </div>
+    <p class="lede">Lumen rolled a loyalty program out to some regions before others. You cannot rerun history to see what the early-adopter regions would have earned without loyalty - the counterfactual is missing, as always. But a plain before/after in the treated regions is confounded by everything else that changed over that time (seasonality, a price move, macro). Difference-in-differences fixes this by subtracting the control group's <em>change</em> from the treated group's <em>change</em>: whatever common shock hit both cancels out, leaving the treatment effect. The whole method rests on one assumption - parallel trends - and this session teaches you to build DiD and to interrogate that assumption in code.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A notebook that (1) computes the 2x2 DiD estimate by hand from four group means, (2) reproduces it as a regression with a Treat×Post interaction and then scales to two-way fixed effects with region and week effects, and (3) plots an event study of leads and lags to check parallel trends. You leave knowing not just how to run DiD, but when the modern staggered-adoption critique says you should not trust the naive version.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: THE ESTIMATOR ============ -->
+  <section class="section" id="estimator">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the estimator</span>
+      <h2>The 2x2 estimate and its regression form <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">With one treated group, one control group, and two periods (pre and post), DiD is a difference of two differences. Take the treated group's post-minus-pre change, subtract the control group's post-minus-pre change, and what remains is the effect - because any shock common to both groups sits in both differences and cancels:</p>
+    <p class="lede"><code>DiD = (Ȳ<sub>T,post</sub> - Ȳ<sub>T,pre</sub>) - (Ȳ<sub>C,post</sub> - Ȳ<sub>C,pre</sub>)</code></p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A two-line chart: treated and control regions move in parallel before rollout, then the treated line jumps above its projected path; a bracket marks the difference of differences.">
+        <style>
+          .diAx { stroke: #C7C4DE; stroke-width: 1.5; }
+          .diTreat { stroke: #3730A3; stroke-width: 3; fill: none; }
+          .diCtrl { stroke: #6366F1; stroke-width: 2.5; fill: none; }
+          .diProj { stroke: #A5B4FC; stroke-width: 2.5; fill: none; stroke-dasharray: 6 5; }
+          .diInt { stroke: #DC2626; stroke-width: 2; stroke-dasharray: 4 4; }
+          .diBr { stroke: #84CC16; stroke-width: 3; fill: none; }
+          .diL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .diN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .diW { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+        </style>
+        <!-- axes -->
+        <line class="diAx" x1="66" y1="40" x2="66" y2="270"/>
+        <line class="diAx" x1="66" y1="270" x2="852" y2="270"/>
+        <text class="diN" x="12" y="150" transform="rotate(-90 12 150)">weekly revenue</text>
+        <text class="diN" x="150" y="290">pre-rollout</text>
+        <text class="diN" x="600" y="290">post-rollout</text>
+        <!-- intervention -->
+        <line class="diInt" x1="450" y1="40" x2="450" y2="270"/>
+        <rect x="400" y="44" width="100" height="22" rx="7" fill="#DC2626"/>
+        <text class="diW" x="412" y="59">rollout</text>
+        <!-- treated observed -->
+        <polyline class="diTreat" points="90,200 210,185 330,170 450,158 570,120 690,100 810,84"/>
+        <!-- treated counterfactual projection (parallel to control) -->
+        <polyline class="diProj" points="450,158 570,142 690,128 810,116"/>
+        <!-- control -->
+        <polyline class="diCtrl" points="90,240 210,226 330,214 450,202 570,188 690,176 810,164"/>
+        <!-- DiD bracket (gap between treated observed and projection, post) -->
+        <path class="diBr" d="M818,84 L818,116"/>
+        <text class="diL" x="640" y="72" style="fill:#3730A3">treated (observed)</text>
+        <text class="diL" x="600" y="138" style="fill:#A5B4FC">treated (parallel projection)</text>
+        <text class="diL" x="620" y="182" style="fill:#6366F1">control</text>
+        <rect x="828" y="86" width="30" height="28" rx="7" fill="#84CC16"/>
+        <text class="diL" x="700" y="106" style="fill:#1A2E05">DiD effect</text>
+        <!-- note squares -->
+        <rect x="66" y="308" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="diN" x="88" y="319" style="fill:#1E1B3A">The dashed line is where treated "should" have gone if it kept moving parallel to control. The gap to the real treated line is the DiD estimate.</text>
+        <rect x="66" y="332" width="14" height="14" rx="3" fill="#4F46E5"/>
+        <text class="diN" x="88" y="343" style="fill:#1E1B3A">Any shock common to both groups (a promo, seasonality) shifts both lines equally and cancels in the double difference.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - parallel pre-trends, then divergence; the difference of differences is the effect</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>The regression that gives you the same number<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>The 2x2 DiD is exactly one coefficient in a regression, which is convenient because you get a standard error and can add covariates:</p>
+        <p><code>Y = β₀ + β₁·Treat + β₂·Post + β₃·(Treat × Post) + ε</code></p>
+        <ul>
+          <li><strong>β₀</strong> - control group, pre-period baseline.</li>
+          <li><strong>β₁</strong> - fixed gap between treated and control (differenced out).</li>
+          <li><strong>β₂</strong> - common time shift from pre to post (differenced out).</li>
+          <li><strong>β₃</strong> - the interaction. <em>This is the DiD estimate</em> - the extra change in the treated group beyond the common time shift.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>β₃ is the whole answer</strong>
+          When you fit the model, the Treat×Post coefficient equals the four-mean hand calculation to the decimal. The regression just hands you inference and room for controls for free.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: PARALLEL TRENDS ============ -->
+  <section class="section" id="parallel-trends">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the assumption</span>
+      <h2>Parallel trends, TWFE, and the modern critique <span class="tag concept">5 min live</span></h2>
+    </div>
+    <p class="lede">DiD is only causal if <strong>parallel trends</strong> holds: absent the treatment, the treated and control groups would have moved by the same amount over time. This is untestable directly - it is a claim about the missing counterfactual - but you can build confidence by checking that the groups moved in parallel <em>before</em> treatment, using an event study. Scaling from 2x2 to many units and periods, you add unit and time fixed effects: two-way fixed effects (TWFE).</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An event-study coefficient plot: pre-period coefficients hover near zero with confidence bands, then post-period coefficients rise clearly above zero.">
+        <style>
+          .esAx { stroke: #C7C4DE; stroke-width: 1.5; }
+          .esZero { stroke: #6B6785; stroke-width: 1.5; stroke-dasharray: 5 4; }
+          .esInt { stroke: #DC2626; stroke-width: 2; stroke-dasharray: 4 4; }
+          .esBand { stroke: #A5B4FC; stroke-width: 2; }
+          .esPre { fill: #6366F1; }
+          .esPost { fill: #84CC16; stroke: #1A2E05; stroke-width: 1; }
+          .esL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .esN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .esW { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+        </style>
+        <!-- axes -->
+        <line class="esAx" x1="66" y1="30" x2="66" y2="250"/>
+        <line class="esAx" x1="66" y1="250" x2="852" y2="250"/>
+        <text class="esN" x="12" y="150" transform="rotate(-90 12 150)">coefficient</text>
+        <!-- zero line -->
+        <line class="esZero" x1="66" y1="160" x2="852" y2="160"/>
+        <text class="esN" x="820" y="155">0</text>
+        <!-- rollout at t=0 -->
+        <line class="esInt" x1="410" y1="30" x2="410" y2="250"/>
+        <text class="esN" x="360" y="46" style="fill:#DC2626">event time 0</text>
+        <!-- pre-period points (near zero) with bands -->
+        <!-- t=-4 -->
+        <line class="esBand" x1="120" y1="150" x2="120" y2="172"/><circle class="esPre" cx="120" cy="162" r="5"/>
+        <line class="esBand" x1="190" y1="146" x2="190" y2="170"/><circle class="esPre" cx="190" cy="158" r="5"/>
+        <line class="esBand" x1="260" y1="152" x2="260" y2="174"/><circle class="esPre" cx="260" cy="163" r="5"/>
+        <line class="esBand" x1="330" y1="150" x2="330" y2="170"/><circle class="esPre" cx="330" cy="160" r="5"/>
+        <!-- post-period points (rising) -->
+        <line class="esBand" x1="470" y1="120" x2="470" y2="146"/><circle class="esPost" cx="470" cy="133" r="5"/>
+        <line class="esBand" x1="560" y1="98" x2="560" y2="126"/><circle class="esPost" cx="560" cy="112" r="5"/>
+        <line class="esBand" x1="650" y1="80" x2="650" y2="110"/><circle class="esPost" cx="650" cy="95" r="5"/>
+        <line class="esBand" x1="740" y1="70" x2="740" y2="102"/><circle class="esPost" cx="740" cy="86" r="5"/>
+        <line class="esBand" x1="810" y1="66" x2="810" y2="98"/><circle class="esPost" cx="810" cy="82" r="5"/>
+        <!-- labels -->
+        <text class="esL" x="150" y="210" style="fill:#6366F1">leads ≈ 0</text>
+        <text class="esN" x="120" y="226">supports parallel trends</text>
+        <text class="esL" x="600" y="60" style="fill:#1A2E05">lags &gt; 0 = effect</text>
+        <!-- note squares -->
+        <rect x="66" y="284" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="esN" x="88" y="295" style="fill:#1E1B3A">Pre-period (lead) coefficients hugging zero is the evidence for parallel trends - it is support, never proof, since the assumption is about the unseen counterfactual.</text>
+        <rect x="66" y="308" width="14" height="14" rx="3" fill="#4F46E5"/>
+        <text class="esN" x="88" y="319" style="fill:#1E1B3A">A trend in the leads (points drifting off zero before t=0) is a red flag: the groups were already diverging, so DiD will mislead.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - event study: pre-period coefficients near zero, post-period effect above zero with confidence bands</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>Why naive TWFE broke under staggered adoption<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>When units adopt treatment at <em>different</em> times (as Lumen's regions do) and the effect grows or changes over time, the classic two-way fixed effects regression can go badly wrong. Goodman-Bacon (2021) showed that TWFE is a weighted average of many 2x2 comparisons - and some of those use already-treated units as "controls" for later-treated ones ("forbidden comparisons"). Under dynamic effects those comparisons get <strong>negative weights</strong>, so TWFE can even flip sign relative to the true effect.</p>
+        <div class="callout tip">
+          <strong>The modern estimators</strong>
+          Callaway &amp; Sant'Anna (2021) fix this by estimating group-time ATTs using only clean (not-yet-treated or never-treated) controls, then aggregating. For staggered rollouts, reach for these over naive TWFE. We build TWFE here so you understand the machine - and flag exactly when to upgrade it.
+        </div>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Card &amp; Krueger (1994) is the canonical DiD: New Jersey raised its minimum wage, Pennsylvania did not, and comparing the change in fast-food employment across the two states challenged the textbook prediction. Same shape as Lumen's loyalty rollout - one side treated, one side not, over time.</p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Compute the 2x2 DiD by hand <span class="tag demo">★ 7 min · everyone</span></h2>
+    </div>
+    <p class="lede">Start with the four-means version so the estimate is never a black box. Take Lumen's early-adopter regions as treated and the late-adopter regions as control, split weekly revenue into pre- and post-rollout, and compute the double difference.</p>
+    <div class="steps">
+      <div class="step"><p>Label groups and periods on the weekly-revenue panel:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_two_by_two.py</span>
+<pre>import pandas as pd, numpy as np
+
+df = pd.read_parquet("lumen_loyalty_panel.parquet")   # region, week, revenue
+early = ["US-CA", "US-NY", "US-TX"]                    # got loyalty first
+ROLLOUT = pd.Timestamp("2026-04-06")
+
+df["Treat"] = df.region.isin(early).astype(int)
+df["Post"]  = (df.week &gt;= ROLLOUT).astype(int)</pre>
+        </div>
+      </div>
+      <div class="step"><p>Four cell means, then the difference of differences:</p>
+        <div class="prompt-box good">
+          <span class="label">did_by_hand.py</span>
+<pre>m = df.groupby(["Treat", "Post"])["revenue"].mean()
+T_pre,  T_post = m[(1, 0)], m[(1, 1)]
+C_pre,  C_post = m[(0, 0)], m[(0, 1)]
+
+did = (T_post - T_pre) - (C_post - C_pre)
+print(f"treated change  = {T_post - T_pre:,.0f}")
+print(f"control change  = {C_post - C_pre:,.0f}")
+print(f"DiD estimate    = {did:,.0f}")   # the effect, common shocks cancelled</pre>
+        </div>
+      </div>
+      <div class="step"><p>The treated change includes the loyalty effect <em>plus</em> whatever moved the whole market; the control change is just the market move. Subtracting isolates the effect - provided the two groups would have moved together anyway. That "provided" is the parallel-trends assumption you test in build-along 3.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Regression DiD, then two-way fixed effects <span class="tag demo">★ 9 min · everyone</span></h2>
+    </div>
+    <p class="lede">Reproduce the hand number as a regression coefficient, then scale to a full panel with region and week fixed effects. The Treat×Post interaction is your estimate; TWFE absorbs every fixed region gap and every common weekly shock.</p>
+    <div class="steps">
+      <div class="step"><p>The interaction regression - β₃ should match build-along 1 exactly:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2a_interaction.py</span>
+<pre>import statsmodels.formula.api as smf
+
+ols = smf.ols("revenue ~ Treat * Post", data=df).fit(
+        cov_type="cluster", cov_kwds={"groups": df["region"]})
+print(ols.params["Treat:Post"])          # == the by-hand DiD
+print(ols.summary())                     # SE + CI on the interaction term</pre>
+        </div>
+      </div>
+      <div class="step"><p>Two-way fixed effects with linearmodels - region + week effects, clustered SEs:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2b_twfe.py</span>
+<pre>from linearmodels.panel import PanelOLS
+
+panel = df.set_index(["region", "week"])
+panel["TreatPost"] = panel["Treat"] * panel["Post"]
+
+twfe = PanelOLS.from_formula(
+    "revenue ~ TreatPost + EntityEffects + TimeEffects",
+    data=panel).fit(cov_type="clustered", cluster_entity=True)
+print(twfe.params["TreatPost"])          # DiD with region + week fixed effects</pre>
+        </div>
+      </div>
+      <div class="step"><p>Entity (region) effects soak up permanent differences between regions; time (week) effects soak up shocks that hit every region in a given week. What is left on <code>TreatPost</code> is the effect - the same logic as the 2x2, generalized to many units and periods.</p></div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>Lumen's regions have wildly different baselines - California dwarfs Washington. Without region fixed effects, that level gap would swamp the analysis. TWFE differences it away automatically, which is why panel DiD is the workhorse for staggered rollouts.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>Event study - test parallel trends in code <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Regress on event-time leads and lags relative to each region's rollout week. Pre-period (lead) coefficients near zero support parallel trends; post-period (lag) coefficients trace the dynamic effect. Then plot it with confidence bands.</p>
+    <div class="steps">
+      <div class="step"><p>Build event time and dummies (omit -1 as the reference period):</p>
+        <div class="prompt-box good">
+          <span class="label">demo3a_event_time.py</span>
+<pre># weeks relative to each region's own rollout; controls never treated -> large event time
+df["evt"] = ((df.week - df.rollout_week) / np.timedelta64(1, "W")).round().astype(int)
+df["evt"] = df["evt"].clip(-4, 6)                 # bin the tails
+
+es = smf.ols("revenue ~ C(evt, Treatment(reference=-1)) + C(region) + C(week)",
+             data=df).fit(cov_type="cluster", cov_kwds={"groups": df["region"]})</pre>
+        </div>
+      </div>
+      <div class="step"><p>Pull the lead/lag coefficients and plot them with 95% bands:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3b_event_plot.py</span>
+<pre>import matplotlib.pyplot as plt
+coef = es.params.filter(like="C(evt")
+ci   = es.conf_int().loc[coef.index]
+k    = [int(s.split("[T.")[1].rstrip("]")) for s in coef.index]
+
+plt.errorbar(k, coef.values,
+             yerr=[coef.values - ci[0], ci[1] - coef.values], fmt="o")
+plt.axhline(0, ls="--"); plt.axvline(-0.5, color="red", ls="--")
+plt.xlabel("weeks since rollout"); plt.ylabel("coefficient")
+# leads (k &lt; 0) near zero -> parallel trends holds; lags (k &gt;= 0) -> the effect</pre>
+        </div>
+      </div>
+      <div class="step"><p>If the lead coefficients hug zero, you have real support for parallel trends and can trust the DiD. If they drift, the groups were already diverging - the estimate is contaminated. And because Lumen's rollout is <strong>staggered</strong>, note the caveat: for a headline number, prefer Callaway-Sant'Anna group-time ATTs over naive TWFE, which can misweight dynamic effects.</p></div>
+    </div>
+    <div class="callout tip">
+      <strong>The leads are the honesty check</strong>
+      You cannot test parallel trends after treatment - that region is the whole point. All you can do is show the groups tracked before treatment and argue nothing else changed at the rollout. Report the event-study plot every time; a DiD without it is a claim, not evidence.
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 10</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Break parallel trends on purpose.</strong> Add a pre-existing upward trend to the treated regions only, rerun DiD, and watch it report a "loyalty effect" that is really just the trend. Confirm the event-study leads now slope - the tell.</li>
+      <li><strong>Reconcile the three numbers.</strong> Show the by-hand 2x2, the interaction β₃, and TWFE agree on a clean balanced panel, and explain what changes when the panel is unbalanced.</li>
+      <li><strong>Try pyfixest.</strong> Re-fit the TWFE and event study in <code>pyfixest</code> and compare speed and syntax to linearmodels - it is becoming the default for large panels.</li>
+      <li><strong>Optional:</strong> read the Goodman-Bacon decomposition of your TWFE estimate and identify which 2x2 comparisons carry negative weight under the staggered rollout.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · In the regression Y = β₀ + β₁·Treat + β₂·Post + β₃·(Treat×Post) + ε, the DiD estimate is...</p>
+      <button class="qopt" type="button">A · β₁, the treated-vs-control gap</button>
+      <button class="qopt" type="button">B · β₂, the pre-to-post time shift</button>
+      <button class="qopt" type="button">C · β₃, the Treat×Post interaction</button>
+      <p class="qwhy">β₃ captures the extra change in the treated group beyond the common time shift - the difference of differences. β₁ and β₂ are the fixed group gap and common time move, both differenced out.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">2 · The key identifying assumption of DiD is...</p>
+      <button class="qopt" type="button">A · parallel trends - absent treatment, both groups would have changed by the same amount</button>
+      <button class="qopt" type="button">B · the two groups have identical baseline levels</button>
+      <button class="qopt" type="button">C · treatment was randomly assigned</button>
+      <p class="qwhy">DiD allows different baseline levels (β₁ absorbs them); it requires that the groups would have moved in parallel without treatment. It is untestable directly - support it with an event-study pre-trend check.</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">3 · Why can naive two-way fixed effects be biased under staggered adoption?</p>
+      <button class="qopt" type="button">A · fixed effects reduce the sample size too much</button>
+      <button class="qopt" type="button">B · it makes "forbidden comparisons" using already-treated units as controls, which get negative weights under dynamic effects</button>
+      <button class="qopt" type="button">C · it cannot include time fixed effects</button>
+      <p class="qwhy">Goodman-Bacon (2021) showed TWFE is a weighted mix of 2x2s, some using earlier-treated units as controls for later ones. Under dynamic effects those get negative weights - Callaway-Sant'Anna use only clean controls to fix it.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">We build the working core of DiD - the estimator, the assumption, and the honest test - and flag the modern staggered-adoption literature. The full econometric treatment lives in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">2x2 DiD, regression form, TWFE, event study</span><span class="note">Parts 1-2 + all three build-alongs on Lumen's loyalty rollout</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Parallel trends and the staggered-adoption critique</span><span class="note">event-study pre-trend check + Goodman-Bacon / Callaway-Sant'Anna</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Card &amp; Krueger 1994; Goodman-Bacon 2021; Callaway-Sant'Anna 2021</span><span class="note">canonical + modern papers - primary sources</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Econometrics &amp; Statistics for Business (Resende, Udemy)</span><span class="note">DiD + panel code depth - extends this session</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Instrumental variables &amp; regression discontinuity</span><span class="note">siblings of DiD - named, not built (out of scope)</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 9 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>2x2 DiD</b><span>(Ȳ<sub>T,post</sub>-Ȳ<sub>T,pre</sub>) - (Ȳ<sub>C,post</sub>-Ȳ<sub>C,pre</sub>). Common shocks cancel in the double difference.</span></div>
+      <div class="cheat-item"><b>Regression form</b><span>Y = β₀ + β₁Treat + β₂Post + β₃(Treat×Post). β₃ is the DiD estimate.</span></div>
+      <div class="cheat-item"><b>Parallel trends</b><span>Absent treatment, both groups move the same. Untestable directly - support with pre-trends.</span></div>
+      <div class="cheat-item"><b>TWFE</b><span>Unit + time fixed effects absorb fixed group gaps and common time shocks. Cluster your SEs.</span></div>
+      <div class="cheat-item"><b>Event study</b><span>Leads near zero support parallel trends; lags trace the dynamic effect. Always plot it.</span></div>
+      <div class="cheat-item"><b>Staggered caveat</b><span>Naive TWFE is biased with staggered adoption + dynamic effects (Goodman-Bacon). Use Callaway-Sant'Anna.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 9 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b8-geo-and-synthetic-control.html">← Prev: Geo experiments and synthetic control</a> &nbsp;·&nbsp; <a href="b10-observational-causal-inference.html">Next: Observational causal inference →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

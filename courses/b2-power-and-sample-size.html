@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 2 · Power and sample size - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 2 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 2 of 10</div>
+    <h1>Power and sample size, <span class="accent">or how big does this test actually need to be?</span></h1>
+    <p class="sub">Session 1 gave you the estimand. Now the first real design decision: how many users before you can trust the answer? We make Type I and Type II error concrete, define power as the probability of catching a real effect, treat the minimum detectable effect as an input you choose rather than a result you discover, and then compute the number in statsmodels. By the end you will have rebuilt the planner from b1 by hand and landed on ~32,000 users per arm for Lumen's flagship test - with every assumption stated out loud.</p>
+    <div class="chip-row">
+      <span class="chip level">🟢 Core</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · statsmodels / scipy</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-16 · Errors and power</span>
+      <span class="a3" style="flex:5">16-40 · Compute N in Python</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The question you must answer before you ship a single variant</h2>
+    </div>
+    <p class="lede">Lumen wants to test a new "hero-first" product-page layout, hoping to lift checkout conversion from a baseline of <strong>3.2%</strong>. Before the experiment runs, someone will ask: "How long do we leave it on?" The honest answer is a calculation, not a vibe. Too few users and a real win hides inside the noise - you kill a good idea. Too many and you burn traffic and calendar you could have spent on the next test. Session 2 turns that trade into arithmetic: pick your tolerance for two kinds of mistake, pick the smallest effect worth detecting, and the sample size falls out. We derive it, then compute it in code, then convert it into a runtime in days.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A small planner of your own: functions that take a baseline rate, a minimum detectable effect, alpha, and power, and return (1) the sample size per arm using <code>statsmodels.stats.power</code>, (2) a power curve you can read the tradeoff off, and (3) the runtime in days at Lumen's traffic. You will reproduce the ~32,000-per-arm number the b1 planner showed you - and understand every assumption behind it.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: TWO ERRORS AND POWER ============ -->
+  <section class="section" id="errors-and-power">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the two mistakes</span>
+      <h2>Type I, Type II, and what power really means <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">Every test can be wrong in exactly two ways. A <strong>Type I error</strong> (false positive) is calling a win when nothing happened - its rate is <code>alpha</code>, conventionally 0.05. A <strong>Type II error</strong> (false negative) is missing a real effect - its rate is <code>beta</code>. <strong>Power = 1 - beta</strong> is the probability you detect an effect that is genuinely there, conventionally set to 0.80. These four cells are the whole design problem: you buy lower error rates with more sample.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A two by two table of truth versus decision, showing Type I error, Type II error, and the two correct decisions, with alpha and power labeled">
+        <style>
+          .t2T { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .t2H { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .t2C { font: 600 12px Inter, sans-serif; fill: #1E1B3A; }
+          .t2N { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <!-- corner + column headers -->
+        <text class="t2H" x="30" y="52">The truth (unknown to you) →</text>
+        <rect x="300" y="30" width="270" height="34" rx="8" fill="#6366F1"/>
+        <text class="t2T" x="326" y="52">No real effect</text>
+        <rect x="580" y="30" width="270" height="34" rx="8" fill="#4F46E5"/>
+        <text class="t2T" x="606" y="52">Real effect exists</text>
+        <!-- row headers -->
+        <rect x="30" y="84" width="250" height="110" rx="8" fill="#3730A3"/>
+        <text class="t2T" x="52" y="130">You call it</text>
+        <text class="t2T" x="52" y="150">"significant"</text>
+        <rect x="30" y="206" width="250" height="110" rx="8" fill="#A5B4FC"/>
+        <text class="t2H" x="52" y="252">You call it</text>
+        <text class="t2H" x="52" y="272">"not significant"</text>
+        <!-- cell: reject | no effect => Type I -->
+        <rect x="300" y="84" width="270" height="110" rx="8" fill="#EEF2FF"/>
+        <text class="t2C" x="326" y="118" style="fill:#DC2626;font-weight:700">Type I error</text>
+        <text class="t2N" x="326" y="140">false positive</text>
+        <text class="t2N" x="326" y="162">rate = alpha (0.05)</text>
+        <text class="t2N" x="326" y="182">ship a dud</text>
+        <!-- cell: reject | real => power -->
+        <rect x="580" y="84" width="270" height="110" rx="8" fill="#84CC16"/>
+        <text class="t2C" x="606" y="118" style="fill:#1A2E05;font-weight:700">Correct - detected</text>
+        <text class="t2C" x="606" y="140" style="fill:#1A2E05">true positive</text>
+        <text class="t2C" x="606" y="162" style="fill:#1A2E05">rate = power = 1 - beta</text>
+        <text class="t2C" x="606" y="182" style="fill:#1A2E05">the win you wanted</text>
+        <!-- cell: retain | no effect => correct -->
+        <rect x="300" y="206" width="270" height="110" rx="8" fill="#E7E5F2"/>
+        <text class="t2C" x="326" y="240">Correct - no call</text>
+        <text class="t2N" x="326" y="262">true negative</text>
+        <text class="t2N" x="326" y="284">rate = 1 - alpha</text>
+        <!-- cell: retain | real => Type II -->
+        <rect x="580" y="206" width="270" height="110" rx="8" fill="#EEF2FF"/>
+        <text class="t2C" x="606" y="240" style="fill:#DC2626;font-weight:700">Type II error</text>
+        <text class="t2N" x="606" y="262">false negative</text>
+        <text class="t2N" x="606" y="284">rate = beta (0.20)</text>
+        <text class="t2N" x="606" y="306">miss a real win</text>
+        <!-- note squares -->
+        <rect x="30" y="324" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="t2N" x="52" y="335" style="fill:#1E1B3A">Power is the green cell: given a real effect, how often you catch it. More sample lifts power without touching alpha.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - truth vs decision: alpha guards false positives, power fights false negatives</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Why 0.05 and 0.80 - and why they are just conventions<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Neither number is a law of nature. <code>alpha = 0.05</code> means you accept a 1-in-20 false-positive rate on a true null; <code>power = 0.80</code> means you accept missing a real effect 1 time in 5. They are defaults that traded off cost and caution well enough to stick. What matters is that you set them <em>before</em> the test and let them drive the sample size.</p>
+        <ul>
+          <li><strong>Lower alpha</strong> (say 0.01) - fewer false wins, but you need more sample to keep the same power.</li>
+          <li><strong>Higher power</strong> (say 0.90) - you catch more real effects, but again the sample grows.</li>
+          <li><strong>The lever you cannot cheat</strong> - you cannot lower both error rates and shrink the test. Sample size is what you pay.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>"Not significant" does not mean "no effect"</strong>
+          A non-significant result is the absence of evidence, not evidence of absence. It usually means the effect was smaller than your test could resolve, or the test was underpowered. Report the confidence interval and the power you had - never the phrase "the variant made no difference".
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>One-sided vs two-sided, and the effect size in between<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A <strong>two-sided</strong> test asks "did the variant change conversion, up or down?" and splits alpha across both tails (<code>z</code> at <code>1 - alpha/2</code>). A <strong>one-sided</strong> test asks only "did it go up?" - cheaper in sample, but you are blind to a drop, which for a product change is exactly the thing a guardrail is meant to catch. We default to two-sided.</p>
+        <p>Between the rates and the sample sits the <strong>effect size</strong> - a standardized distance between the two arms. For proportions, statsmodels uses <code>proportion_effectsize</code>, which applies an arcsine (variance-stabilizing) transform so the two-proportion problem maps onto its normal-power machinery.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: MDE AND THE FORMULA ============ -->
+  <section class="section" id="mde-and-formula">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the design input</span>
+      <h2>MDE is a choice, not an output <span class="tag concept">4 min live</span></h2>
+    </div>
+    <p class="lede">The <strong>minimum detectable effect</strong> is the smallest lift you care about catching. It is an <em>input</em> you decide with the business - "a 0.4pp absolute lift, from 3.2% to 3.6%, is worth shipping" - and it drives everything. Smaller MDE means you are hunting a fainter signal, which costs sample fast: sample size scales with <code>1 / delta^2</code>, so halving the MDE roughly quadruples the test. Get the product to commit to an MDE before you compute anything.</p>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>The rule of 16 and the two-proportion formula<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>For a quick back-of-envelope check at the conventional <code>alpha = 0.05</code>, <code>power = 0.80</code>, two-sided settings, the <strong>rule of 16</strong> is your friend:</p>
+        <p style="text-align:center"><code>n per arm ≈ 16 · sigma^2 / delta^2</code></p>
+        <p>The 16 is <code>(z_{1-alpha/2} + z_{1-beta})^2 = (1.96 + 0.84)^2 ≈ 7.84 · 2</code> for two arms, rounded up for safety. For a proportion, <code>sigma^2 = p(1 - p)</code>. The exact two-proportion formula the planner uses is:</p>
+        <p style="text-align:center"><code>n ≈ 2 · p̄(1 - p̄) · (z_{1-alpha/2} + z_{1-beta})^2 / (p1 - p2)^2</code></p>
+        <p>where <code>p̄</code> is the pooled rate. Plug Lumen's numbers - <code>p = 0.032</code>, <code>delta = 0.004</code> - and the rule of 16 gives <code>16 · 0.032 · 0.968 / 0.004^2 ≈ 31,000</code> per arm. The exact formula lands a touch higher, at ~32,000. Close enough that if statsmodels ever disagrees with the rule of 16 by a lot, you typed something wrong.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PLAYGROUND ============ -->
+  <section class="section" id="playground">
+    <div class="section-kicker">
+      <span class="klabel">The tool this session is about</span>
+      <h2>The sample-size planner - this is its home <span class="tag concept">try it</span></h2>
+    </div>
+    <p class="lede">You met this planner in b1 as a preview. Today it is the whole point. Drag the dials: raise the baseline, shrink the MDE, tighten alpha, push power up - and watch sample size and runtime respond. It is seeded with Lumen's flagship test (3.2% baseline, +12.5% relative MDE, alpha 5%, power 80%, 4,000 users/day). The three build-alongs below rebuild this tool's math by hand so nothing here is a black box.</p>
+    <div class="exp-live" data-tool="planner" data-base="3.2" data-mde="12.5" data-alpha="5" data-power="80" data-daily="4000"></div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Compute N per arm in statsmodels <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Rebuild the planner's core number. We use <code>statsmodels.stats.power</code> with <code>NormalIndPower</code> and turn Lumen's two rates into an effect size with <code>proportion_effectsize</code>. The target: ~32,000 per arm for the 3.2% → 3.6% test - and we state every assumption alongside it.</p>
+    <div class="steps">
+      <div class="step"><p>Turn the two conversion rates into a standardized effect size, then solve for the sample size per arm:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_sample_size.py</span>
+<pre>import numpy as np
+from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import proportion_effectsize
+
+p1, p2 = 0.032, 0.036          # Lumen: control 3.2% vs variant 3.6%
+alpha, power = 0.05, 0.80       # conventions, chosen up front
+# arcsine-transformed standardized effect for a two-proportion test
+effect = proportion_effectsize(p2, p1)
+
+analysis = NormalIndPower()
+n_per_arm = analysis.solve_power(
+    effect_size=effect,
+    alpha=alpha,
+    power=power,
+    ratio=1.0,                  # 50/50 split, equal arms
+    alternative="two-sided",    # we care about up OR down
+)
+print(f"n per arm  = {np.ceil(n_per_arm):,.0f}")   # ~32,000
+print(f"total N    = {np.ceil(n_per_arm)*2:,.0f}") # ~64,000</pre>
+        </div>
+      </div>
+      <div class="step"><p>Run it. You land on <b>~32,000 per arm, ~64,000 total</b>. Say the assumptions out loud every time you quote it: <em>baseline 3.2%, absolute MDE 0.4pp (relative +12.5%), alpha 0.05, power 0.80, two-sided, equal 50/50 allocation</em>. A sample size with no assumptions attached is a number nobody can trust.</p></div>
+      <div class="step"><p>Sanity-check against the rule of 16 - if these disagree by more than a rounding, you have a bug:</p>
+        <div class="prompt-box good">
+          <span class="label">rule_of_16.py</span>
+<pre>p, delta = 0.032, 0.004                 # baseline and absolute MDE
+approx = 16 * p * (1 - p) / delta**2    # sigma^2 = p(1-p)
+print(f"rule-of-16 ≈ {approx:,.0f} per arm")   # ~31,000, agrees</pre>
+        </div>
+      </div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>A stakeholder says "let's just run it for a week and see." At 4,000 users/day that is ~28,000 total - under half of what this test needs. You would be running an experiment that, even if the layout truly lifts conversion by 0.4pp, has well under 50% odds of showing significance. That is how good ideas get "disproven" by an underpowered test.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Draw the power curve and see the tradeoff <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">A single number hides the shape of the decision. Sweep the sample size, compute power at each point, and plot it. You will see power climb toward 1.0 with diminishing returns - and read straight off the curve how much traffic buys you how much detection.</p>
+    <div class="steps">
+      <div class="step"><p>Hold the effect fixed at Lumen's MDE and sweep N per arm, computing power at each size:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_power_curve.py</span>
+<pre>import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import proportion_effectsize
+
+effect = proportion_effectsize(0.036, 0.032)
+analysis = NormalIndPower()
+
+ns = np.arange(2_000, 60_001, 2_000)      # sweep sample size per arm
+powers = [analysis.solve_power(effect_size=effect, nobs1=n,
+                               alpha=0.05, alternative="two-sided")
+          for n in ns]</pre>
+        </div>
+      </div>
+      <div class="step"><p>Plot the curve and mark the 0.80 power line and the ~32,000 crossing point:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_plot.py</span>
+<pre>fig, ax = plt.subplots(figsize=(7, 4))
+ax.plot(ns, powers, color="#4F46E5", linewidth=2.5)
+ax.axhline(0.80, color="#84CC16", linestyle="--", label="power = 0.80")
+ax.axvline(32_000, color="#DC2626", linestyle=":", label="~32,000 / arm")
+ax.set_xlabel("sample size per arm")
+ax.set_ylabel("power (1 - beta)")
+ax.set_title("Power vs sample size - Lumen 3.2% to 3.6% test")
+ax.legend()
+fig.tight_layout()
+fig.savefig("power_curve.png", dpi=120)
+# the curve rises steeply, then flattens: past ~32k you pay a lot for little</pre>
+        </div>
+      </div>
+      <div class="step"><p>Read the shape. The curve is steep in the middle and flat near the top - the last few points of power cost enormous sample. This is why 0.80 is the convention: it sits near the knee, where you get most of the detection for a reasonable price. Chasing 0.99 power is almost never worth the traffic.</p></div>
+    </div>
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A power curve rising with sample size, steep at first then flattening, with the 0.80 power line and the 32,000 per arm point marked">
+        <style>
+          .pcAx { stroke: #C7C4DE; stroke-width: 2; fill: none; }
+          .pcCv { stroke: #4F46E5; stroke-width: 3.5; fill: none; }
+          .pc80 { stroke: #84CC16; stroke-width: 2.5; stroke-dasharray: 7 5; }
+          .pcN  { stroke: #DC2626; stroke-width: 2; stroke-dasharray: 3 4; }
+          .pcL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .pcT { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <!-- axes -->
+        <line class="pcAx" x1="90" y1="40" x2="90" y2="250"/>
+        <line class="pcAx" x1="90" y1="250" x2="820" y2="250"/>
+        <text class="pcL" x="30" y="50">power</text>
+        <text class="pcT" x="30" y="150">0.80</text>
+        <text class="pcT" x="30" y="248">0.0</text>
+        <text class="pcL" x="700" y="278">sample size / arm →</text>
+        <!-- 0.80 line -->
+        <line class="pc80" x1="90" y1="120" x2="820" y2="120"/>
+        <text class="pcL" x="700" y="114" style="fill:#4a6b0a">power = 0.80</text>
+        <!-- 32k marker -->
+        <line class="pcN" x1="430" y1="60" x2="430" y2="250"/>
+        <text class="pcT" x="392" y="266" style="fill:#DC2626">~32,000</text>
+        <!-- rising then flattening curve -->
+        <path class="pcCv" d="M90,246 C180,236 250,210 320,160 C380,128 415,122 430,120 C520,110 640,96 820,84"/>
+        <!-- crossing dot -->
+        <circle cx="430" cy="120" r="6" fill="#84CC16" stroke="#1A2E05" stroke-width="1.5"/>
+        <!-- note squares -->
+        <rect x="90" y="292" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="pcT" x="112" y="303" style="fill:#1E1B3A">Steep then flat: the 0.80 convention sits near the knee - most of the detection for a sane amount of traffic.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - power rises with sample size, then flattens; 0.80 sits near the knee</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>Turn N into a runtime in days <span class="tag demo">★ 6 min · everyone</span></h2>
+    </div>
+    <p class="lede">A sample size means nothing to a stakeholder until it becomes a calendar. Wrap the whole calculation in one function that takes the business inputs and returns both the per-arm N and the number of days at Lumen's traffic. At 4,000 eligible users/day split 50/50, the ~64,000-user test runs ~16-17 days.</p>
+    <div class="steps">
+      <div class="step"><p>Write the planner function - baseline, MDE, alpha, power, daily traffic in; sample size and days out:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_planner.py</span>
+<pre>import numpy as np
+from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import proportion_effectsize
+
+def plan_test(baseline, mde_rel, alpha=0.05, power=0.80,
+              daily_traffic=4000, two_sided=True):
+    """Return (n_per_arm, days) for a two-proportion test.
+    baseline: control rate, e.g. 0.032
+    mde_rel:  relative lift to detect, e.g. 0.125 for +12.5%
+    daily_traffic: eligible users/day, split 50/50 across 2 arms
+    """
+    p1 = baseline
+    p2 = baseline * (1 + mde_rel)            # 0.032 -> 0.036
+    effect = proportion_effectsize(p2, p1)
+    alt = "two-sided" if two_sided else "larger"
+    n = NormalIndPower().solve_power(
+        effect_size=effect, alpha=alpha, power=power,
+        ratio=1.0, alternative=alt)
+    n_per_arm = int(np.ceil(n))
+    total = n_per_arm * 2
+    days = int(np.ceil(total / daily_traffic))   # 50/50 uses all traffic
+    return n_per_arm, days</pre>
+        </div>
+      </div>
+      <div class="step"><p>Call it with Lumen's flagship test and print a one-line brief anyone can act on:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_run.py</span>
+<pre>n_arm, days = plan_test(baseline=0.032, mde_rel=0.125,
+                        daily_traffic=4000)
+print(f"{n_arm:,} per arm  ->  {n_arm*2:,} total  ->  {days} days")
+# 32,000 per arm  ->  64,000 total  ->  16 days  (~2.5 weeks)</pre>
+        </div>
+      </div>
+      <div class="step"><p>Now the planner is yours end to end. Change any input and the calendar updates: this is exactly what the b1 widget does under the hood, minus the sliders. Hand a PM the number <em>and</em> the days, and "how long do we run it?" stops being a debate.</p></div>
+    </div>
+    <div class="callout tip">
+      <strong>Round days up, and pad for weekly seasonality</strong>
+      Always round runtime up, and prefer to run in whole weeks when your traffic swings by day of week (Lumen's does - weekends convert differently). A 16-day plan is usually run as a full 2-3 weeks so every weekday appears an equal number of times.
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 3</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Feel the blow-up.</strong> Recompute N for a smaller MDE - drop the target lift from +12.5% to +6%. Watch the per-arm sample roughly quadruple. Plot N vs MDE and see the <code>1/delta^2</code> curve with your own eyes.</li>
+      <li><strong>Power a mean metric too.</strong> Lumen also tracks average order value ($92 canonical). Use <code>statsmodels.stats.power.TTestIndPower</code> with a standardized effect (Cohen's d = delta/sigma) to size a t-test, and compare the feel to the proportion case.</li>
+      <li><strong>Tighten the rates.</strong> Rerun the planner at alpha 0.01 and at power 0.90. Note how much extra sample each buys you, and decide which you would actually pay for on Lumen's flagship test.</li>
+      <li><strong>Optional:</strong> add an <code>unequal allocation</code> option (ratio = 2.0, more traffic to control) and see how a lopsided split changes the total N for the same power.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · Statistical power is the probability of...</p>
+      <button class="qopt" type="button">A · rejecting a true null hypothesis</button>
+      <button class="qopt" type="button">B · getting a p-value below 0.05 by chance</button>
+      <button class="qopt" type="button">C · detecting an effect when one truly exists (1 - beta)</button>
+      <p class="qwhy">Power = 1 - beta is the true-positive rate: given a real effect of at least your MDE, how often the test flags it. More sample raises power without touching alpha.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">2 · Your test comes back p = 0.21 and "not significant". The safest reading is...</p>
+      <button class="qopt" type="button">A · absence of evidence - the effect may be real but smaller than the test could resolve; report the CI and power</button>
+      <button class="qopt" type="button">B · the variant definitely has no effect, so never ship it</button>
+      <button class="qopt" type="button">C · the variant is proven identical to control</button>
+      <p class="qwhy">"Not significant" ≠ "no effect". A non-significant result is the absence of evidence, not evidence of absence - often it just means the test was underpowered for the true effect. Report the confidence interval and the power you had, never "no difference".</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">3 · You halve the minimum detectable effect you want to catch, holding alpha and power fixed. Sample size per arm roughly...</p>
+      <button class="qopt" type="button">A · halves</button>
+      <button class="qopt" type="button">B · quadruples (sample scales with 1 / delta^2)</button>
+      <button class="qopt" type="button">C · stays the same - MDE does not affect sample</button>
+      <p class="qwhy">Sample size scales with 1/delta^2, so halving the MDE multiplies N by about four. MDE is a design input you choose up front, and small MDEs are expensive.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">Power and sample size are taught across the A/B and statistics courses; we build the working core in statsmodels and leave the deeper theory and the tool UIs to the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Type I / II error, alpha, beta, power = 1 - beta</span><span class="note">Part 1 + the 2x2 truth-vs-decision figure</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">MDE as a design input, rule of 16, two-proportion N</span><span class="note">Part 2 + build-along 1 (~32,000/arm, stated assumptions)</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Power curves and N-to-runtime</span><span class="note">build-alongs 2-3 (statsmodels + matplotlib planner)</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">365 Data Science - A/B Testing in Python (Kuznetsova)</span><span class="note">most on-point; graded work stays on platform</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">LinkedIn - Data Science of Experimental Design (Wahi)</span><span class="note">G*Power UI for sample size - concept-level here</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Udacity A/B Testing (Google, ud257)</span><span class="note">the canonical online-experiment course - videos on platform</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 2 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Two errors</b><span>Type I = false positive (rate alpha, 0.05). Type II = false negative (rate beta). You trade both against sample size.</span></div>
+      <div class="cheat-item"><b>Power</b><span>Power = 1 - beta, conventionally 0.80. The chance you catch a real effect. More sample raises it without touching alpha.</span></div>
+      <div class="cheat-item"><b>MDE is an input</b><span>The smallest lift worth detecting - you choose it with the business. N scales with 1/delta^2, so small MDEs cost a lot.</span></div>
+      <div class="cheat-item"><b>Rule of 16</b><span>n per arm ≈ 16·p(1-p)/delta^2 at alpha 0.05, power 0.80, two-sided. A fast sanity check on statsmodels.</span></div>
+      <div class="cheat-item"><b>Lumen's number</b><span>3.2% → 3.6% (0.4pp, +12.5%): ~32,000/arm, ~64,000 total, ~16-17 days at 4,000/day. Always quote the assumptions.</span></div>
+      <div class="cheat-item"><b>Not sig ≠ no effect</b><span>A non-significant result is absence of evidence, not evidence of absence. Report the CI and the power, never "no difference".</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 2 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b1-potential-outcomes.html">← Prev: Potential outcomes and the estimand</a> &nbsp;·&nbsp; <a href="b3-randomization-and-trust.html">Next: Randomization and trust →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/exp-live.js?v=1"></script>
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

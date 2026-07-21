@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leader session 3 · The trust checklist - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Leader session 3 of 6</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Leader session 3 of 6</div>
+    <h1>The trust <span class="accent">checklist</span></h1>
+    <p class="sub">Session 2 taught you to read a result. This session teaches you to distrust it - on purpose, and in the right order - before you believe it. A test can be perfectly "significant" and still be broken: assigned unfairly, run on a leaky pipeline, split lopsided, flattered by novelty, or quietly wrecking a metric that must not break. This is your six-question gate. Ask these before the lift number matters, and you will catch the broken tests that a green badge would otherwise wave straight through. Each question is one you say out loud in a review - no math, no code.</p>
+    <div class="chip-row">
+      <span class="chip level">🟡 Core</span>
+      <span class="chip audience">Leaders · C-level / PM / marketing</span>
+      <span class="chip audience">No code</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:4">3-24 · The six questions</span>
+      <span class="a3" style="flex:2">24-34 · Pre-commit the size</span>
+      <span class="a4" style="flex:2">34-45 · The gate + wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>A significant result can still be a broken one</h2>
+    </div>
+    <p class="lede">The green "significant" badge only tells you the gap is unlikely to be pure luck. It says nothing about whether the test was built correctly in the first place. A test can be assigned unfairly, validated never, split 55/45 when it should be 50/50, flattered by the novelty of a new design, contaminated by users talking to each other, or winning on conversion while silently breaking refunds. None of those show up as "not significant" - they show up as a confident, wrong recommendation. Your defence is a checklist you run before you let the lift number into the conversation.</p>
+    <div class="legend">
+      <span class="pill solid">Live - covered in session</span>
+      <span class="pill light">Self-study - read after</span>
+      <span class="pill amber">★ The one big idea</span>
+      <span class="pill inkpill">The case: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A six-item trust gate you can run in any review: was assignment random and at the right unit, was the pipeline validated with an A/A test, did the group sizes match the intended split (SRM), is the win just novelty wearing off, could the treatment have leaked into the control (interference), and did any guardrail metric get worse. Pass all six and the result has earned the right to be believed. Fail one and you stop - a broken test's lift number is worse than no number, because it looks trustworthy.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: THE SIX QUESTIONS ============ -->
+  <section class="section" id="six-questions">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the checklist</span>
+      <h2>Six questions to ask before you believe a test <span class="tag concept">10 min live</span></h2>
+    </div>
+    <p class="lede">Run these in order. The early ones are cheap and catch the most damage - a test that fails randomization or SRM is not worth reading further. Each is framed the way you would actually say it in a results review, followed by why it matters and the Lumen story that makes it concrete.</p>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>1 · "Was assignment random, and at the right unit?"<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Randomization is the whole reason an A/B test can claim causation - it makes the two groups comparable on everything, including things you never measured. If people chose their own group, or were split by something non-random (signup date, region, device), the groups are no longer twins and any gap is contaminated. The <strong>unit</strong> matters too: if one shopper can land in both groups across visits, the comparison leaks.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen once "tested" a new checkout by giving it to everyone on mobile and keeping desktop on the old flow. Mobile shoppers convert differently for a dozen reasons, so the "lift" was mostly a device difference, not the checkout. The fix was to randomize each visitor by a coin flip within every device, so the only systematic difference between the groups was the checkout itself.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>2 · "Did we validate the pipeline with an A/A test?"<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>An A/A test shows both groups the <em>same</em> thing and checks that the measurement machinery reports "no difference", as it should. It is a smoke test for the plumbing: tracking, bucketing, and the stats. If an A/A test finds a "winner" between two identical experiences, something is broken - and you would never have known from an A/B result alone.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Before trusting its experimentation platform, Lumen ran an A/A on the product page. A clean A/A returns roughly uniform p-values and flags "significant" about 5% of the time by chance - exactly as expected. Their first attempt instead showed a consistent 0.3-point gap between identical pages, which traced to a logging bug that double-counted one group. They fixed the pipeline before running a single real test. An A/A that "wins" is a gift - it tells you the numbers cannot be trusted yet.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>3 · "Were the groups the size we intended?" (Sample Ratio Mismatch)<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>You planned a 50/50 split. If the data shows 52/48, or worse, something decided who landed where - a redirect that dropped slow connections, a bot filter that hit one arm, a bucketing bug. This is <strong>Sample Ratio Mismatch (SRM)</strong>, and it is a red flag that invalidates the test: if the split is not what you intended, the groups are no longer comparable, and the lift is untrustworthy no matter how significant it looks.</p>
+        <ul>
+          <li>SRM is checked with a quick statistical test, and the alarm threshold is strict - roughly 1 in 1,000, not the usual 1 in 20 - because even a small imbalance signals a real problem.</li>
+          <li>The right response to SRM is not to interpret the result. It is to stop, find the cause, and rerun. A test with SRM is a broken test, full stop.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen's hero-first test was planned as 50/50 across roughly 64,000 users - about 32,000 per arm. The deck arrived showing 33,700 in control and 30,300 in variant. That lopsided split was SRM: a caching rule had quietly sent some variant traffic back to the old page. The "+0.5 point win" was meaningless because the two groups were no longer built the same way. They stopped, fixed the cache, and reran - and the honest result was smaller.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>4 · "Is the win just novelty (or the reverse, primacy)?"<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>People react to <em>new</em>, not just to <em>better</em>. A fresh design can get a bump purely because it is unfamiliar and grabs attention - the <strong>novelty effect</strong> - which fades once it becomes the norm. The opposite, the <strong>primacy effect</strong>, is when loyal users are briefly annoyed by change and the new version looks worse than it truly is. Both are temporary reactions to change itself, not to the change's real value.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>A bold new Lumen homepage banner won big in week one. But when the team split the results by new versus returning visitors, the entire lift came from returning shoppers clicking the shiny new thing - and it decayed sharply by week two. New visitors, who had no "old" to compare against, showed no lift at all. The durable effect was near zero. The tell: a win concentrated in returning users that shrinks over time is usually novelty, not value.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>5 · "Could the treatment have leaked into the control?" (interference)<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A clean test assumes each group's experience is independent - what happens to the variant does not touch the control. That assumption (statisticians call it SUTVA) breaks when users interact, share, or compete for the same finite resource. When treatment "leaks" into control, both groups move together and the true effect is masked or faked.</p>
+        <ul>
+          <li><strong>Marketplaces and shared inventory</strong> - if the variant makes buyers grab limited stock faster, the control group sees fewer items available. You changed the control by testing.</li>
+          <li><strong>Referrals and social sharing</strong> - a variant user sends a discount link to a control-group friend. The treatment jumped the fence.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen tested an aggressive "refer a friend" reward on half its users. Those users shared codes with friends who happened to be in the control group, lifting control's conversion too. The measured gap between groups looked small, badly understating the program's real impact. When the units can talk to each other, splitting individuals is the wrong design - which is exactly why Session 4 reaches for geo tests, where whole regions are the unit.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>6 · "Did anything that must-not-break get worse?" (guardrail metrics)<span class="mini">2 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A test optimises one headline metric, but the business runs on many. <strong>Guardrail metrics</strong> are the numbers that must not degrade even if the headline wins - the vetoes. A conversion lift that quietly doubles refunds, slows the page, or tanks add-to-cart is not a win; it is a problem with good marketing.</p>
+        <ul>
+          <li>For Lumen the guardrails are <strong>page-load latency, refund rate, and add-to-cart rate</strong>. A win on conversion that breaks any of these is not shipped.</li>
+          <li>Guardrails are agreed before the test, so nobody can quietly drop an inconvenient one after the results are in.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>Question to ask in a review</strong>
+          "Which guardrails did we pre-agree, and did all of them hold?" If the deck only shows the headline metric, the guardrails were either not checked or not shown - both are reasons to pause before shipping.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ SRM SVG ============ -->
+  <section class="section" id="srm-picture">
+    <div class="section-kicker">
+      <span class="klabel">The clearest red flag</span>
+      <h2>What Sample Ratio Mismatch looks like <span class="tag concept">4 min live</span></h2>
+    </div>
+    <p class="lede">SRM is the checklist item with the least judgement and the most force: either the groups are the intended size or they are not, and if they are not, you stop. Here is the picture - what you planned versus what the broken test delivered.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Intended split is a clean 50/50 of about 32,000 users per arm. Observed split is a lopsided 33,700 versus 30,300, which triggers a stop sign because the groups are no longer comparable.">
+        <style>
+          .a3srmT { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .a3srmW { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .a3srmS { font: 600 11px Inter, sans-serif; fill: #FFFFFF; opacity:.96; }
+          .a3srmN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <!-- intended -->
+        <text class="a3srmT" x="30" y="34">Intended: a clean 50 / 50</text>
+        <rect x="30" y="48" width="200" height="72" rx="12" fill="#4F46E5"/>
+        <text class="a3srmW" x="50" y="78">Control</text><text class="a3srmS" x="50" y="100">~32,000 (50%)</text>
+        <rect x="240" y="48" width="200" height="72" rx="12" fill="#6366F1"/>
+        <text class="a3srmW" x="260" y="78">Variant</text><text class="a3srmS" x="260" y="100">~32,000 (50%)</text>
+        <rect x="30" y="128" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="a3srmN" x="52" y="139" style="fill:#1E1B3A">Groups are twins. The only difference is the page. Safe to read.</text>
+        <!-- observed -->
+        <text class="a3srmT" x="30" y="188">Observed: lopsided - SRM</text>
+        <rect x="30" y="202" width="222" height="72" rx="12" fill="#3730A3"/>
+        <text class="a3srmW" x="50" y="232">Control</text><text class="a3srmS" x="50" y="254">33,700 (52.7%)</text>
+        <rect x="262" y="202" width="178" height="72" rx="12" fill="#C7C4DE"/>
+        <text class="a3srmT" x="282" y="232" style="fill:#1E1B3A">Variant</text><text class="a3srmN" x="282" y="254" style="fill:#1E1B3A">30,300 (47.3%)</text>
+        <text class="a3srmN" x="30" y="296" style="fill:#DC2626">A caching rule sent some variant traffic back to control. The groups are no longer comparable.</text>
+        <!-- STOP sign -->
+        <polygon points="620,110 700,110 756,166 756,246 700,302 620,302 564,246 564,166" fill="#DC2626"/>
+        <text x="660" y="205" text-anchor="middle" style="font:700 30px Inter,sans-serif; fill:#FFFFFF;">STOP</text>
+        <text class="a3srmN" x="660" y="240" text-anchor="middle" style="fill:#FFFFFF; opacity:.95;">do not read this test</text>
+        <text class="a3srmN" x="784" y="180" style="fill:#1E1B3A">SRM alarm fires at</text>
+        <text class="a3srmN" x="784" y="197" style="fill:#1E1B3A">~1 in 1,000, not</text>
+        <text class="a3srmN" x="784" y="214" style="fill:#1E1B3A">1 in 20. Even a</text>
+        <text class="a3srmN" x="784" y="231" style="fill:#1E1B3A">small imbalance</text>
+        <text class="a3srmN" x="784" y="248" style="fill:#1E1B3A">means: stop, debug,</text>
+        <text class="a3srmN" x="784" y="265" style="fill:#1E1B3A">rerun.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - if the split is not what you intended, the lift number does not matter yet</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ THE GATE SVG ============ -->
+  <section class="section" id="the-gate">
+    <div class="section-kicker">
+      <span class="klabel">The checklist as a gate</span>
+      <h2>Six gates before "believe the result" <span class="tag concept">4 min live</span></h2>
+    </div>
+    <p class="lede">Think of the checklist as a ladder the test must climb before its lift number earns your trust. Each rung is one question. Fail any rung and you do not proceed to the next - you send the test back. Only a test that clears all six has earned a place in the decision.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Six stacked gates from bottom to top: randomization, A/A validation, no SRM, novelty checked, no interference, guardrails held - leading to a final believe-the-result banner.">
+        <style>
+          .a3gT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .a3gN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .a3gArr { stroke: #C7C4DE; stroke-width: 2.5; fill: none; marker-end: url(#a3gAh); }
+          .a3gNum { font: 700 13px Inter, sans-serif; fill: #1A2E05; }
+        </style>
+        <defs>
+          <marker id="a3gAh" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#C7C4DE" stroke-width="1.6"/></marker>
+        </defs>
+        <!-- gates stacked -->
+        <rect x="120" y="300" width="470" height="34" rx="9" fill="#A5B4FC"/>
+        <circle cx="140" cy="317" r="11" fill="#84CC16"/><text class="a3gNum" x="136" y="322">1</text>
+        <text class="a3gN" x="162" y="322" style="fill:#1E1B3A">Random assignment at the right unit</text>
+        <rect x="120" y="256" width="470" height="34" rx="9" fill="#A5B4FC"/>
+        <circle cx="140" cy="273" r="11" fill="#84CC16"/><text class="a3gNum" x="136" y="278">2</text>
+        <text class="a3gN" x="162" y="278" style="fill:#1E1B3A">Pipeline validated with an A/A test</text>
+        <rect x="120" y="212" width="470" height="34" rx="9" fill="#6366F1"/>
+        <circle cx="140" cy="229" r="11" fill="#84CC16"/><text class="a3gNum" x="136" y="234">3</text>
+        <text class="a3gT" x="162" y="234">No SRM - groups are the intended size</text>
+        <rect x="120" y="168" width="470" height="34" rx="9" fill="#6366F1"/>
+        <circle cx="140" cy="185" r="11" fill="#84CC16"/><text class="a3gNum" x="136" y="190">4</text>
+        <text class="a3gT" x="162" y="190">Not just novelty or primacy</text>
+        <rect x="120" y="124" width="470" height="34" rx="9" fill="#4F46E5"/>
+        <circle cx="140" cy="141" r="11" fill="#84CC16"/><text class="a3gNum" x="136" y="146">5</text>
+        <text class="a3gT" x="162" y="146">No interference or spillover</text>
+        <rect x="120" y="80" width="470" height="34" rx="9" fill="#4F46E5"/>
+        <circle cx="140" cy="97" r="11" fill="#84CC16"/><text class="a3gNum" x="136" y="102">6</text>
+        <text class="a3gT" x="162" y="102">Guardrail metrics all held</text>
+        <!-- climbing arrows -->
+        <path class="a3gArr" d="M600,317 C640,317 640,273 600,273"/>
+        <path class="a3gArr" d="M600,273 C640,273 640,229 600,229"/>
+        <path class="a3gArr" d="M600,229 C640,229 640,185 600,185"/>
+        <path class="a3gArr" d="M600,185 C640,185 640,141 600,141"/>
+        <path class="a3gArr" d="M600,141 C640,141 640,97 600,97"/>
+        <!-- top banner -->
+        <rect x="120" y="30" width="470" height="38" rx="10" fill="#3730A3"/>
+        <text class="a3gT" x="300" y="54">★ Now believe the result</text>
+        <path class="a3gArr" d="M355,80 L355,70"/>
+        <!-- side note -->
+        <rect x="640" y="80" width="210" height="120" rx="12" fill="#EEF2FF"/>
+        <text class="a3gN" x="656" y="106" style="fill:#1E1B3A">Fail any rung and</text>
+        <text class="a3gN" x="656" y="123" style="fill:#1E1B3A">you stop climbing.</text>
+        <text class="a3gN" x="656" y="140" style="fill:#1E1B3A">A broken test's lift</text>
+        <text class="a3gN" x="656" y="157" style="fill:#1E1B3A">is worse than no</text>
+        <text class="a3gN" x="656" y="174" style="fill:#1E1B3A">number - it looks</text>
+        <text class="a3gN" x="656" y="191" style="fill:#1E1B3A">trustworthy.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - the result earns trust only after clearing all six gates</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ PLAYGROUND ============ -->
+  <section class="section" id="playground">
+    <div class="section-kicker">
+      <span class="klabel">Why pre-committing the sample size matters</span>
+      <h2>Stopping when it "looks good" fakes a winner <span class="tag concept">try it</span></h2>
+    </div>
+    <p class="lede">The checklist assumes the test ran to its planned finish line. This tool shows why that matters. Both versions here are truly identical - there is no real difference. The test is designed to run to ~32,000 per arm. Watch how often peeking early and stopping at the first "significant" moment declares a false winner, far above the honest 5%. Nobody cheated; they just looked too soon. This is why a trustworthy result names its sample size before the test starts, and sticks to it.</p>
+    <div class="exp-live" data-tool="peeking" data-base="3.2" data-nfinal="32000" data-runs="400"></div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 4</span>
+      <h2>This week <span class="tag exercise">◐ 30 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Run the six-question gate</strong> on a real experiment in your org. For each question, mark pass, fail, or "the deck doesn't say". Count how many are "doesn't say" - that gap is usually where trust quietly leaks.</li>
+      <li><strong>Pick your guardrails.</strong> For one upcoming test, write down the two or three metrics that must NOT get worse even if the headline wins. Get them agreed before the test runs.</li>
+      <li><strong>Find a novelty suspect.</strong> Look for a past "win" that was strongest in week one among returning users. Ask whether anyone checked if it lasted.</li>
+      <li><strong>Play with the peeking tool above.</strong> Set the peeks high and watch the false-win rate climb even though nothing is truly different. Bring the number you see to Session 4.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · A test planned as 50/50 arrives showing 33,700 in control and 30,300 in variant. What should you do?</p>
+      <button class="qopt" type="button">A · trust the result - the split is close enough</button>
+      <button class="qopt" type="button">B · treat it as Sample Ratio Mismatch - stop, find why the split is lopsided, and rerun; the groups are no longer comparable</button>
+      <button class="qopt" type="button">C · just drop the extra control users to rebalance</button>
+      <p class="qwhy">SRM means something decided who landed where, so the groups are no longer twins. The alarm threshold is strict (~1 in 1,000). Do not interpret the lift - debug the cause and rerun. Dropping users does not fix the underlying bias.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · A new banner wins big in week one, entirely among returning visitors, and the lift fades by week two. The most likely explanation is...</p>
+      <button class="qopt" type="button">A · the banner is a durable, real improvement</button>
+      <button class="qopt" type="button">B · the test had Sample Ratio Mismatch</button>
+      <button class="qopt" type="button">C · a novelty effect - returning users reacted to the change itself, and the bump decayed as it became familiar</button>
+      <p class="qwhy">A win concentrated in returning users that shrinks over time is the classic novelty signature. New visitors, with no "old" to compare, showed no lift - so the durable effect was near zero.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · An A/A test (both groups shown the same thing) reports a "significant" winner. What does that tell you?</p>
+      <button class="qopt" type="button">A · the measurement pipeline is broken and no result can be trusted until it is fixed</button>
+      <button class="qopt" type="button">B · one version is genuinely better</button>
+      <button class="qopt" type="button">C · the sample was too small</button>
+      <p class="qwhy">Identical experiences should show no real difference (a clean A/A flags "significant" only ~5% of the time by chance). A consistent "winner" between two identical groups points to a plumbing bug - tracking, bucketing, or the stats - that must be fixed first.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">This leader session distills the validity threats that separate a trustworthy test from a broken one - the conceptual ~80%. The statistical mechanics (the SRM chi-square, the randomization code) live in the builder track and the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Randomization, unit of assignment, and A/A validation</span><span class="note">questions 1-2 - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Sample Ratio Mismatch as a stop-the-test red flag</span><span class="note">question 3 and the SRM picture</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Novelty/primacy, interference (SUTVA), guardrail metrics</span><span class="note">questions 4-6 - Part 1</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Udemy - Ultimate A/B Testing (Dan Lee)</span><span class="note">SRM, SUTVA, novelty validity threats - builder track</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Kohavi, Tang &amp; Xu - Trustworthy Online Controlled Experiments</span><span class="note">the industry bible on test trust; culture in Session 6</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">SRM chi-square, A/A pipeline checks, randomization code</span><span class="note">Builder Session 3 - the mechanics</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Leader Session 3 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Randomization</b><span>Random assignment at the right unit is what makes the groups comparable. Self-selected or device-split groups are not twins.</span></div>
+      <div class="cheat-item"><b>A/A test</b><span>Show both groups the same thing; the pipeline should report "no difference". An A/A that "wins" means the plumbing is broken.</span></div>
+      <div class="cheat-item"><b>SRM</b><span>Groups not the intended size (e.g. 52/48). A red flag that invalidates the test. Alarm at ~1 in 1,000. Stop, debug, rerun.</span></div>
+      <div class="cheat-item"><b>Novelty / primacy</b><span>Reactions to change itself, not value. A win that's strongest in returning users and fades over weeks is usually novelty.</span></div>
+      <div class="cheat-item"><b>Interference (SUTVA)</b><span>Treatment leaks to control via sharing, referrals, or shared inventory. When units interact, split by geo, not by user.</span></div>
+      <div class="cheat-item"><b>Guardrail metrics</b><span>Numbers that must not break even if the headline wins - Lumen: latency, refund rate, add-to-cart. Agreed before the test.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Leader session 3 of 6 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="a2-reading-a-test.html">← Prev: Reading a test you didn't run</a> &nbsp;·&nbsp; <a href="a4-beyond-the-button.html">Next: Beyond the button →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/exp-live.js?v=1"></script>
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

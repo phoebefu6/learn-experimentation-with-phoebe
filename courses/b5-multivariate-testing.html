@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 5 · Multivariate testing - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 5 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 5 of 10</div>
+    <h1>Multivariate testing, <span class="accent">and the interactions a stack of A/B tests can't see</span></h1>
+    <p class="sub">A/B tests change one thing. But what if Lumen's new hero image only lifts conversion when it is paired with a punchier CTA - and does nothing, or hurts, with the old copy? That is an interaction, and running two separate A/B tests will never reveal it. Multivariate testing puts every combination in the field at once so you can read main effects AND interactions from a single experiment. Today you fit a two-way ANOVA in statsmodels, read the interaction term, plot it, and see the price MVT charges: cells that multiply and traffic that has to keep up.</p>
+    <div class="chip-row">
+      <span class="chip level">🟠 Advanced</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · statsmodels / pyDOE</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-15 · Factorial + interactions</span>
+      <span class="a3" style="flex:5">15-40 · Fit it in Python</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>Why one-thing-at-a-time misses the story</h2>
+    </div>
+    <p class="lede">The clean A/B discipline of b4 - change exactly one thing so the effect is unambiguous - has a blind spot. Real product changes travel in bundles: a new hero image <em>and</em> new CTA copy <em>and</em> a new layout ship together, and their effects are not always additive. When the effect of one factor depends on the level of another, that is an <strong>interaction</strong>, and a series of isolated A/B tests is structurally incapable of detecting it. Multivariate testing (MVT) tests multiple factors simultaneously in a factorial design, so a single experiment estimates each factor's main effect and the interactions between them. The catch: the number of cells grows with every factor, and your traffic has to fill them all.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A notebook that (1) simulates a Lumen 2&#215;2 test - hero image {A,B} &#215; CTA copy {A,B} - with a real interaction baked in, fits <code>ols</code> with a <code>C(hero)*C(cta)</code> formula and reads main effects plus the interaction from <code>anova_lm</code>; (2) draws the interaction plot where non-parallel lines betray the interaction; and (3) builds a fractional design with pyDOE2 and demonstrates aliasing - why a smaller design cannot recover a given interaction.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: FACTORIAL DESIGNS ============ -->
+  <section class="section" id="factorial">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the design</span>
+      <h2>Full vs fractional factorial <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">A <strong>full factorial</strong> tests every combination of every factor. With k two-level factors that is 2<sup>k</sup> cells: 2 factors = 4 cells, 3 factors = 8, 5 factors = 32. Its virtue is completeness - it can estimate every main effect and every interaction, up to the k-way. Its cost is traffic: your users split across all those cells, and each cell needs enough volume to be powered. A <strong>fractional factorial</strong> runs a carefully chosen subset of the cells - halving or quartering the design - to save traffic. The price is <strong>aliasing</strong> (also called confounding): some effects become mathematically indistinguishable from one another, so you trade the ability to estimate certain (usually higher-order) interactions for a smaller, cheaper design.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left: a full-factorial 2 by 2 grid with all four cells filled. Right: a 2 by 2 by 2 cube where a fractional design runs only half the cells, highlighted.">
+        <style>
+          .ffT { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .ffW { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+          .ffC { font: 600 12px Inter, sans-serif; fill: #1E1B3A; }
+          .ffN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+        </style>
+        <!-- LEFT: full factorial 2x2 -->
+        <text class="ffT" x="18" y="30">Full factorial 2&#215;2 = 4 cells</text>
+        <text class="ffN" x="18" y="50">hero {A,B} &#215; CTA {A,B} - every combination runs</text>
+        <!-- axis labels -->
+        <text class="ffN" x="70" y="82">CTA A</text>
+        <text class="ffN" x="200" y="82">CTA B</text>
+        <text class="ffN" x="18" y="118" transform="rotate(-90 18 118)"></text>
+        <text class="ffN" x="8" y="118">hero A</text>
+        <text class="ffN" x="8" y="188">hero B</text>
+        <rect x="60" y="92" width="120" height="56" rx="8" fill="#3730A3"/><text class="ffW" x="96" y="124">A / A</text>
+        <rect x="190" y="92" width="120" height="56" rx="8" fill="#4F46E5"/><text class="ffW" x="226" y="124">A / B</text>
+        <rect x="60" y="158" width="120" height="56" rx="8" fill="#6366F1"/><text class="ffW" x="96" y="190">B / A</text>
+        <rect x="190" y="158" width="120" height="56" rx="8" fill="#A5B4FC"/><text class="ffC" x="226" y="190">B / B</text>
+        <text class="ffN" x="60" y="242" style="fill:#1E1B3A">All 4 estimate: hero effect, CTA effect,</text>
+        <text class="ffN" x="60" y="258" style="fill:#1E1B3A">and the hero&#215;CTA interaction.</text>
+        <!-- RIGHT: fractional of a 2^3 cube -->
+        <text class="ffT" x="470" y="30">Fractional of 2&#179; = run 4 of 8 cells</text>
+        <text class="ffN" x="470" y="50">3 factors, half-fraction (2&#179;&#8315;&#185;) - saves traffic</text>
+        <!-- cube: draw 8 nodes -->
+        <!-- back square -->
+        <line x1="560" y1="90" x2="700" y2="90" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="700" y1="90" x2="700" y2="200" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="700" y1="200" x2="560" y2="200" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="560" y1="200" x2="560" y2="90" stroke="#C7C4DE" stroke-width="2"/>
+        <!-- front square offset -->
+        <line x1="610" y1="130" x2="750" y2="130" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="750" y1="130" x2="750" y2="240" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="750" y1="240" x2="610" y2="240" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="610" y1="240" x2="610" y2="130" stroke="#C7C4DE" stroke-width="2"/>
+        <!-- connectors -->
+        <line x1="560" y1="90" x2="610" y2="130" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="700" y1="90" x2="750" y2="130" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="560" y1="200" x2="610" y2="240" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="700" y1="200" x2="750" y2="240" stroke="#C7C4DE" stroke-width="2"/>
+        <!-- run cells (lime) vs skipped (light) -->
+        <circle cx="560" cy="90"  r="11" fill="#84CC16"/>
+        <circle cx="700" cy="200" r="11" fill="#84CC16"/>
+        <circle cx="750" cy="130" r="11" fill="#84CC16"/>
+        <circle cx="610" cy="240" r="11" fill="#84CC16"/>
+        <circle cx="700" cy="90"  r="9" fill="#E7E5F2"/>
+        <circle cx="560" cy="200" r="9" fill="#E7E5F2"/>
+        <circle cx="610" cy="130" r="9" fill="#E7E5F2"/>
+        <circle cx="750" cy="240" r="9" fill="#E7E5F2"/>
+        <rect x="470" y="272" width="12" height="12" rx="3" fill="#84CC16"/>
+        <text class="ffN" x="488" y="282" style="fill:#1E1B3A">4 cells run</text>
+        <rect x="580" y="272" width="12" height="12" rx="3" fill="#E7E5F2"/>
+        <text class="ffN" x="598" y="282" style="fill:#1E1B3A">4 cells skipped - their effects alias onto the ones you kept</text>
+        <!-- note -->
+        <rect x="18" y="300" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="ffN" x="40" y="311" style="fill:#1E1B3A">Full = estimate everything, traffic-hungry (2&#7503; cells). Fractional = cheaper, but aliases higher-order interactions with main effects.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - a full 2&#215;2 fills every cell; a fractional design of a 2&#179; cube runs only half</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>What "interaction" actually means<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>An <strong>interaction effect</strong> exists when the effect of factor A depends on the level of factor B. If the new hero image lifts conversion by 0.5pp with the old CTA but by 1.5pp with the new CTA, hero and CTA interact - you cannot describe the hero effect with a single number, because it is different in each CTA world.</p>
+        <ul>
+          <li><strong>Main effect</strong> - the average effect of a factor across the levels of the others. "Hero B beats hero A by X on average."</li>
+          <li><strong>Interaction</strong> - the extra effect that appears only in specific combinations. Additive models miss it entirely.</li>
+          <li><strong>Why two A/B tests fail</strong> - test hero alone, then CTA alone, and you estimate two main effects and <em>assume</em> no interaction. If one exists, both single-factor readings are misleading, and the best cell might be one you never ran together.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen A/B-tests a bold hero image: flat, no lift, so they shelve it. Separately they A/B-test punchier CTA copy: small lift, they ship it. They never learn that the bold hero + punchy CTA <em>together</em> would have lifted conversion 1.5pp - because the winning combination was never in the same test. That is the interaction an MVT would have caught in one run.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>Why MVT is so traffic-hungry<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Two forces make MVT demand far more traffic than a single A/B test.</p>
+        <ul>
+          <li><strong>Cells multiply.</strong> Each factor multiplies the cell count: 2 factors &#8594; 4 cells, 3 &#8594; 8, 4 &#8594; 16. Your fixed daily traffic (Lumen: ~4,000 checkout sessions/day) is now split many ways, so each cell fills slowly and the test runs longer.</li>
+          <li><strong>Interactions are small.</strong> Interaction effects are typically much smaller than main effects, and detecting a small effect needs a large sample (recall the power math from b2 - N scales with 1/&#948;&#178;). So the very thing MVT exists to find is the thing that needs the most data.</li>
+          <li><strong>The trade.</strong> A full factorial with few factors and strong effects is great. Many factors, or a hunt for subtle higher-order interactions, is where you either need enormous traffic or accept a fractional design and its aliasing.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: INTERACTION PLOT CONCEPT ============ -->
+  <section class="section" id="interaction">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · reading it</span>
+      <h2>Parallel lines or crossing lines <span class="tag concept">3 min live</span></h2>
+    </div>
+    <p class="lede">The fastest way to see an interaction is a picture. Plot the outcome (conversion) on the y-axis, one factor across the x-axis, and one line per level of the other factor. If the lines are <strong>parallel</strong>, the effect of each factor is the same regardless of the other - no interaction, the model is additive. If the lines are <strong>non-parallel</strong> (converging, diverging, or crossing), the effect of one factor depends on the level of the other - an interaction is present. Crossing lines are the dramatic case: the best hero image actually flips depending on which CTA you pair it with.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left: two parallel lines meaning no interaction. Right: two crossing lines meaning a strong interaction where the better hero flips with the CTA.">
+        <style>
+          .ipT { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .ipN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .ipAx { stroke: #C7C4DE; stroke-width: 2; }
+          .ipL1 { stroke: #4F46E5; stroke-width: 3; fill: none; }
+          .ipL2 { stroke: #84CC16; stroke-width: 3; fill: none; }
+        </style>
+        <!-- LEFT: parallel = no interaction -->
+        <text class="ipT" x="30" y="30">Parallel lines = no interaction</text>
+        <line class="ipAx" x1="60" y1="60" x2="60" y2="220"/>
+        <line class="ipAx" x1="60" y1="220" x2="380" y2="220"/>
+        <text class="ipN" x="14" y="140" transform="rotate(-90 14 140)">conversion</text>
+        <text class="ipN" x="90" y="240">CTA A</text>
+        <text class="ipN" x="300" y="240">CTA B</text>
+        <!-- two parallel lines -->
+        <line class="ipL1" x1="110" y1="180" x2="330" y2="120"/>
+        <line class="ipL2" x1="110" y1="140" x2="330" y2="80"/>
+        <circle cx="110" cy="180" r="5" fill="#4F46E5"/><circle cx="330" cy="120" r="5" fill="#4F46E5"/>
+        <circle cx="110" cy="140" r="5" fill="#84CC16"/><circle cx="330" cy="80" r="5" fill="#84CC16"/>
+        <text class="ipN" x="336" y="122" style="fill:#4F46E5">hero A</text>
+        <text class="ipN" x="336" y="82" style="fill:#1A2E05">hero B</text>
+        <text class="ipN" x="70" y="270" style="fill:#1E1B3A">hero B beats A by the same gap under either CTA - additive.</text>
+        <!-- RIGHT: crossing = interaction -->
+        <text class="ipT" x="490" y="30">Crossing lines = interaction</text>
+        <line class="ipAx" x1="520" y1="60" x2="520" y2="220"/>
+        <line class="ipAx" x1="520" y1="220" x2="840" y2="220"/>
+        <text class="ipN" x="550" y="240">CTA A</text>
+        <text class="ipN" x="760" y="240">CTA B</text>
+        <line class="ipL1" x1="570" y1="110" x2="790" y2="170"/>
+        <line class="ipL2" x1="570" y1="175" x2="790" y2="85"/>
+        <circle cx="570" cy="110" r="5" fill="#4F46E5"/><circle cx="790" cy="170" r="5" fill="#4F46E5"/>
+        <circle cx="570" cy="175" r="5" fill="#84CC16"/><circle cx="790" cy="85" r="5" fill="#84CC16"/>
+        <text class="ipN" x="796" y="172" style="fill:#4F46E5">hero A</text>
+        <text class="ipN" x="796" y="87" style="fill:#1A2E05">hero B</text>
+        <text class="ipN" x="530" y="270" style="fill:#1E1B3A">hero A wins under CTA A, hero B wins under CTA B - the effect flips.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - parallel lines mean no interaction; crossing lines mean the winning factor flips with the other</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>Reading the ANOVA table<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Two-way ANOVA decomposes the variation in conversion into pieces and tests each with an F-statistic. In a <code>C(hero)*C(cta)</code> model you get three rows that matter, plus the residual.</p>
+        <table class="clean">
+          <thead><tr><th>Term</th><th>Tests</th><th>Read it as</th></tr></thead>
+          <tbody>
+            <tr><td><b>C(hero)</b></td><td>main effect of hero</td><td>does hero matter on average?</td></tr>
+            <tr><td><b>C(cta)</b></td><td>main effect of CTA</td><td>does CTA matter on average?</td></tr>
+            <tr><td><b>C(hero):C(cta)</b></td><td>the interaction</td><td>does hero's effect depend on CTA?</td></tr>
+          </tbody>
+        </table>
+        <div class="callout tip">
+          <strong>Read the interaction row first</strong>
+          If the interaction is significant, the two main effects can no longer be interpreted on their own - "the hero effect" is not a single number, it changes by CTA. Report the interaction and the per-cell means, not just the averages. If the interaction is not significant, then the main effects tell the clean, additive story.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Simulate the 2&#215;2 and fit the ANOVA <span class="tag demo">★ 9 min · everyone</span></h2>
+    </div>
+    <p class="lede">We build a Lumen test with four cells - hero {A,B} &#215; CTA {A,B} - and bake in a real interaction: hero B only helps when paired with CTA B. Then we fit <code>ols</code> with an interaction formula and read <code>anova_lm</code> to recover it.</p>
+    <div class="steps">
+      <div class="step"><p>Simulate ~8,000 users per cell with cell-level conversion rates that carry an interaction:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_simulate_2x2.py</span>
+<pre>import numpy as np, pandas as pd
+rng = np.random.default_rng(42)
+
+# per-cell TRUE conversion rate - note B/B is higher than additivity predicts
+rates = {("A","A"): 0.032, ("A","B"): 0.034,
+         ("B","A"): 0.031, ("B","B"): 0.045}   # interaction lives in B/B
+
+rows = []
+n_cell = 8_000
+for (hero, cta), p in rates.items():
+    y = (rng.random(n_cell) &lt; p).astype(int)
+    rows.append(pd.DataFrame({"hero": hero, "cta": cta, "convert": y}))
+df = pd.concat(rows, ignore_index=True)
+print(df.groupby(["hero","cta"]).convert.mean().round(4))</pre>
+        </div>
+      </div>
+      <div class="step"><p>Fit the model with a <code>*</code> in the formula - statsmodels expands <code>C(hero)*C(cta)</code> into both main effects plus their interaction:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_anova.py</span>
+<pre>import statsmodels.formula.api as smf
+import statsmodels.api as sm
+
+model = smf.ols("convert ~ C(hero)*C(cta)", data=df).fit()
+anova = sm.stats.anova_lm(model, typ=2)
+print(anova[["F", "PR(&gt;F)"]].round(4))
+# C(hero), C(cta), and C(hero):C(cta) each get an F and a p-value
+# the interaction row C(hero):C(cta) should be significant here</pre>
+        </div>
+      </div>
+      <div class="step"><p>Read the interaction row (<code>C(hero):C(cta)</code>) first. Because we built the lift into B/B only, its p-value is small - the effect of the hero image genuinely depends on the CTA. That means you cannot quote "the hero effect" as one number; you report the interaction and the four cell means. Two separate A/B tests would have reported hero B as roughly flat and missed the winning combination entirely.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Draw the interaction plot <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">The ANOVA gives you a p-value; the interaction plot gives you the intuition. We plot cell-mean conversion with CTA on the x-axis and one line per hero level - and watch the lines refuse to stay parallel.</p>
+    <div class="steps">
+      <div class="step"><p>Get the four cell means into a shape you can plot:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_cell_means.py</span>
+<pre>cell = (df.groupby(["hero","cta"]).convert.mean()
+          .reset_index())
+pivot = cell.pivot(index="cta", columns="hero", values="convert")
+print(pivot)
+#          hero        A        B
+#  cta A               0.032    0.031
+#  cta B               0.034    0.045   &lt;- B jumps only here</pre>
+        </div>
+      </div>
+      <div class="step"><p>Plot one line per hero level across the CTA levels - non-parallel lines are the interaction, on screen:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_interaction_plot.py</span>
+<pre>import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(5, 4))
+for hero in ["A", "B"]:
+    ax.plot(pivot.index, pivot[hero], marker="o", label=f"hero {hero}")
+ax.set_xlabel("CTA copy"); ax.set_ylabel("conversion rate")
+ax.set_title("Interaction plot - non-parallel = interaction")
+ax.legend(); fig.tight_layout(); plt.show()
+# hero A is roughly flat; hero B climbs sharply from CTA A to CTA B
+# the two lines diverge -> the interaction you just tested, visualized</pre>
+        </div>
+      </div>
+      <div class="step"><p>The lines fan apart: hero B is no better than A under CTA A, but clearly better under CTA B. Statsmodels has an off-the-shelf helper too - <code>statsmodels.graphics.factorplots.interaction_plot(df.cta, df.hero, df.convert)</code> - which draws the same picture from the raw columns. Either way, if you can only show a stakeholder one chart, show this one.</p></div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>An interaction plot is the single most persuasive slide in an MVT readout. "Here are two lines; they cross" lands with an exec far better than an F-statistic. When the lines are clearly non-parallel you can say "the best hero <em>depends</em> on the CTA, so we should ship the B/B combination, not hero B everywhere" - a recommendation no pair of A/B tests could have produced.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>A fractional design, and aliasing <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Add factors and the full factorial explodes: 5 two-level factors = 32 cells. A fractional design runs a fraction of them to save traffic - but you pay in aliasing. We generate a half-fraction with pyDOE2 and show exactly which effects become indistinguishable.</p>
+    <div class="steps">
+      <div class="step"><p>Generate a full 2&#179; design and a half-fraction (2&#179;&#8315;&#185;) with pyDOE2, using the generator C = A&#215;B:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_fractional.py</span>
+<pre>from pyDOE2 import ff2n, fracfact
+import numpy as np
+
+full = ff2n(3)                 # full 2^3 = 8 runs, factors A B C in -1/+1
+print("full factorial runs:", full.shape[0])   # 8
+
+# half-fraction: define C as the product of A and B (generator C = AB)
+frac = fracfact("a b ab")      # 2^(3-1) = 4 runs
+print("fractional runs:", frac.shape[0])        # 4  -> half the traffic</pre>
+        </div>
+      </div>
+      <div class="step"><p>Show the aliasing directly. Because C was <em>defined</em> as A&#215;B, the column for C and the column for the AB interaction are identical - so their effects cannot be separated:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_aliasing.py</span>
+<pre>A, B, C = frac[:, 0], frac[:, 1], frac[:, 2]
+AB = A * B
+print("C  :", C.astype(int))     # e.g. [ 1 -1 -1  1]
+print("A*B:", AB.astype(int))    # e.g. [ 1 -1 -1  1]  -> identical!
+print("aliased?", np.array_equal(C, AB))   # True</pre>
+        </div>
+      </div>
+      <div class="step"><p>Because column C equals column A&#215;B, the main effect of factor C is <strong>aliased</strong> with the A&#215;B interaction - the design literally cannot tell them apart. If your fitted "C effect" is large, you genuinely do not know whether it is factor C, the A&#215;B interaction, or a mix. That is the trade: half the traffic, but you gave up the ability to recover that interaction cleanly. Full factorials avoid aliasing entirely - which is why, when you specifically care about an interaction, you either run the full design or choose a fraction whose alias structure protects the effect you care about.</p></div>
+    </div>
+    <div class="callout tip">
+      <strong>Choose the design by what you need to estimate</strong>
+      Want main effects only, with many factors and tight traffic? A fractional (resolution III/IV) design is efficient. Suspect a specific two-factor interaction matters (like hero&#215;CTA)? Run the full factorial for those factors so nothing you care about is aliased. The design is a contract about which effects you will be able to see - sign it before you launch, not after.
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 6</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Add a third factor.</strong> Extend the Lumen test with a layout factor {A,B}, making a 2&#179; = 8-cell full factorial. At ~8,000 users per cell, that is 64,000 users; at ~4,000 daily checkout sessions, work out the runtime. Feel the cell count bite.</li>
+      <li><strong>Count the traffic cost.</strong> Tabulate cells and required N for k = 2, 3, 4, 5 factors (2<sup>k</sup> cells). Plot cells vs k and mark where Lumen's daily traffic makes the test infeasibly long - that is your practical ceiling on full MVT.</li>
+      <li><strong>A/B/n vs MVT decision.</strong> Take a real Lumen question - say, "which of 4 hero images and 3 CTAs is best?" - and decide: run one big MVT (12 cells), a sequence of A/B tests, or an A/B/n on the single highest-leverage factor. Justify it by expected traffic, whether you suspect interactions, and how fast you need the answer.</li>
+      <li><strong>Optional:</strong> refit build-along 1 <em>without</em> the interaction term (<code>convert ~ C(hero) + C(cta)</code>) and compare the fitted B/B prediction to the true 4.5%. See the additive model underpredict exactly the cell where the interaction lived.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · What does an interaction effect between hero image and CTA copy mean?</p>
+      <button class="qopt" type="button">A · both factors have large main effects</button>
+      <button class="qopt" type="button">B · the effect of the hero image depends on the level of the CTA copy</button>
+      <button class="qopt" type="button">C · the two factors are correlated in the data</button>
+      <p class="qwhy">An interaction means one factor's effect changes with the level of another - hero B might help only under CTA B. Additive models and separate A/B tests cannot capture it.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · A full factorial versus a fractional factorial - what is the core trade-off?</p>
+      <button class="qopt" type="button">A · full is always more accurate; fractional is always wrong</button>
+      <button class="qopt" type="button">B · fractional needs more traffic than full</button>
+      <button class="qopt" type="button">C · full estimates all interactions but needs 2ᵏ cells; fractional saves traffic but aliases some effects together</button>
+      <p class="qwhy">Full factorials test every combination (2ᵏ cells) and can estimate every interaction, at a high traffic cost. Fractional designs run a subset to save traffic, but that aliases (confounds) certain effects so they cannot be separated.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · On an interaction plot, what do non-parallel (crossing) lines indicate?</p>
+      <button class="qopt" type="button">A · an interaction is present - the better factor level depends on the other factor</button>
+      <button class="qopt" type="button">B · no interaction, the effects are additive</button>
+      <button class="qopt" type="button">C · the experiment had a sample-ratio mismatch</button>
+      <p class="qwhy">Parallel lines mean each factor's effect is constant regardless of the other (additive, no interaction). Non-parallel or crossing lines mean the effect of one factor changes with the other - an interaction.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">Factorial design and interactions are the working core of classical DOE. We teach ~80% of the practical MVT toolkit here - factorial vs fractional, interactions, two-way ANOVA, and aliasing; response-surface optimization and the deeper DOE theory live in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Full vs fractional factorial, cells = 2ᵏ, aliasing / confounding</span><span class="note">pyDOE2 - Part 1, build-along 3</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Interaction effects, main effects, two-way ANOVA (C(A)*C(B))</span><span class="note">statsmodels ols + anova_lm - Part 1-2, build-along 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Interaction plots: parallel vs crossing lines</span><span class="note">matplotlib - Part 2, build-along 2</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Experimentation for Improvement (McMaster, Dunn) 4.9★</span><span class="note">classical DOE + response-surface methods in depth</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Statistics (365 Data Science, Valchanov)</span><span class="note">the ANOVA / F-test inference backbone</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 5 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Multivariate testing</b><span>Test multiple factors at once in a factorial design to read main effects AND interactions from one experiment.</span></div>
+      <div class="cheat-item"><b>Interaction</b><span>Effect of factor A depends on the level of factor B. Separate A/B tests cannot detect it - the winning combo may never be co-tested.</span></div>
+      <div class="cheat-item"><b>Full factorial</b><span>Every combination, 2ᵏ cells. Estimates all interactions; traffic-hungry as k grows.</span></div>
+      <div class="cheat-item"><b>Fractional factorial</b><span>A chosen subset of cells. Saves traffic but aliases (confounds) higher-order interactions with main effects.</span></div>
+      <div class="cheat-item"><b>Two-way ANOVA</b><span><code>ols("y ~ C(a)*C(b)")</code> + <code>anova_lm</code>. Read the interaction row first; if significant, main effects are not single numbers.</span></div>
+      <div class="cheat-item"><b>Interaction plot</b><span>Cell means, one line per level. Parallel = no interaction; non-parallel / crossing = interaction present.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 5 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b4-run-an-ab-test.html">← Prev: Run and analyze an A/B test</a> &nbsp;·&nbsp; <a href="b6-sequential-and-peeking.html">Next: Sequential testing and peeking →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

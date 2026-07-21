@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 8 · Geo experiments and synthetic control - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 8 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 8 of 10</div>
+    <h1>Geo experiments <span class="accent">and synthetic control</span></h1>
+    <p class="sub">Sometimes you cannot randomize a person. TV, connected TV, and a privacy-first world push the experiment up to the region. This session builds two of the hardest, most credible tools in the kit - geo holdouts and the synthetic control method - in Python on Lumen's 9 US regions. You will construct a synthetic "twin" for the treated regions out of a donor pool, read the lift off the gap, and then try to break your own estimate with placebo tests. This is where quasi-experiments start to feel like real evidence.</p>
+    <div class="chip-row">
+      <span class="chip level">🔴 Hardest</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · CausalImpact / pysyncon</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-16 · Geo + SCM</span>
+      <span class="a3" style="flex:5">16-40 · Build it in Python</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>When the coin flip has to move up a level</h2>
+    </div>
+    <p class="lede">Lumen wants to test a connected-TV burst - a two-month brand campaign running on CTV in a handful of US metros. You cannot randomize which shopper "sees TV"; the delivery is inherently geographic, and post-cookie you cannot even track it cleanly at the user level. So you randomize or select <strong>regions</strong> instead: treat a subset, hold the rest out, and reconstruct what the treated regions would have done without the burst. Session 8 teaches the two credible ways to build that counterfactual - Google's CausalImpact and the synthetic control method (SCM) - and, just as important, how to earn trust in the estimate with a good pre-period fit and placebo inference.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A notebook that (1) assembles Lumen's 9-region weekly-revenue panel and splits it into treated vs donor regions, (2) fits a synthetic counterfactual with both CausalImpact and pysyncon and reads the cumulative lift with a credible interval, and (3) validates the whole thing with pre-period fit checks and a placebo permutation test. You leave able to say "the burst added X, and here is why I believe it" - not just point at a line going up.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: GEO EXPERIMENTS ============ -->
+  <section class="section" id="geo">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the setup</span>
+      <h2>Geo experiments - randomize the region, not the person <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">A geo experiment makes the <strong>region</strong> the unit of randomization. You split markets (DMAs, states, metros) into treated and control, run the intervention in the treated markets only, and compare aggregate outcomes. This is the right tool when treatment cannot be delivered per user - broadcast and CTV media, pricing, a policy change - or when privacy loss (Safari/Firefox/ATT) has gutted user-level tracking. The cost is fewer units: you might have 9 regions, not 64,000 users, so the analysis leans hard on modeling the counterfactual well.</p>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Two named traditions - do not conflate them<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>There are two distinct lineages here, and mixing up their names is a classic tell that someone learned this from a blog post.</p>
+        <ul>
+          <li><strong>Google - Geo experiments</strong> (Vaver &amp; Koehler 2011) plus <strong>CausalImpact</strong> (Brodersen et al. 2015), which uses a Bayesian structural time-series model to forecast the counterfactual from control markets.</li>
+          <li><strong>Meta - GeoLift</strong>, which is built on the synthetic control method.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>There is no "Google GeoLift"</strong>
+          GeoLift is Meta's, and it is SCM-based. Google's tools are Geo experiments and CausalImpact (BSTS). If a deck says "Google GeoLift", the author blended two vendors - dock a credibility point and check the rest of the analysis.
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>The donor pool must be clean<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>Every method here reconstructs the treated region from <em>untreated</em> regions - the donor pool. That only works if the donors were genuinely unaffected by the treatment. If Lumen's CTV burst in California spills into neighbouring Nevada (shared media market, cross-border shoppers), Nevada is contaminated and cannot be a donor. This is the geo-level echo of SUTVA (no interference) from b3: a spillover onto a "control" region quietly deflates your measured effect.</p>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen's first geo test failed review because a treated metro and its "control" neighbour shared a DMA - the TV signal crossed the line. The fix was to drop adjacent regions from the donor pool and add a geographic buffer. Cleaner donors, smaller pool, more honest number.</p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: SYNTHETIC CONTROL ============ -->
+  <section class="section" id="scm">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the method</span>
+      <h2>Synthetic control - build a twin from a weighted donor pool <span class="tag concept">5 min live</span></h2>
+    </div>
+    <p class="lede">The synthetic control method (Abadie &amp; Gardeazabal 2003; Abadie, Diamond &amp; Hainmueller 2010) builds a <strong>synthetic</strong> treated unit as a weighted average of untreated donor units. The weights (non-negative, summing to 1) are chosen so the synthetic unit tracks the treated unit's outcome as closely as possible <em>before</em> treatment. After the intervention, the gap between the real treated line and its synthetic twin is the estimated effect. A tight pre-treatment fit is the whole credibility test - if the synthetic cannot match the treated region before anything happened, you have no reason to trust it afterward.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A line chart: the treated region's real revenue and its synthetic counterfactual track together before the CTV burst, then diverge into a lime gap after it.">
+        <style>
+          .scAx { stroke: #C7C4DE; stroke-width: 1.5; }
+          .scGrid { stroke: #E7E5F2; stroke-width: 1; }
+          .scTreat { stroke: #3730A3; stroke-width: 3; fill: none; }
+          .scSynth { stroke: #6366F1; stroke-width: 2.5; fill: none; stroke-dasharray: 7 5; }
+          .scInt { stroke: #DC2626; stroke-width: 2; stroke-dasharray: 4 4; }
+          .scL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .scN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .scW { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+        </style>
+        <!-- axes -->
+        <line class="scAx" x1="66" y1="40" x2="66" y2="262"/>
+        <line class="scAx" x1="66" y1="262" x2="852" y2="262"/>
+        <text class="scN" x="12" y="150" transform="rotate(-90 12 150)">weekly revenue</text>
+        <text class="scN" x="120" y="282">52-week pre-period</text>
+        <text class="scN" x="600" y="282">post: CTV burst live</text>
+        <!-- gap shading (effect) -->
+        <polygon points="520,170 560,150 620,135 680,120 740,110 800,100 840,95 840,157 800,158 740,160 680,163 620,165 560,168 520,172" fill="#84CC16" opacity="0.28"/>
+        <!-- intervention line -->
+        <line class="scInt" x1="520" y1="40" x2="520" y2="262"/>
+        <rect x="470" y="44" width="100" height="22" rx="7" fill="#DC2626"/>
+        <text class="scW" x="482" y="59">intervention</text>
+        <!-- synthetic (dashed) -->
+        <polyline class="scSynth" points="70,182 130,172 190,183 250,167 310,176 370,170 430,173 520,172 560,168 620,165 680,163 740,160 800,158 840,157"/>
+        <!-- treated (solid) -->
+        <polyline class="scTreat" points="70,180 130,170 190,185 250,165 310,178 370,168 430,175 520,170 560,150 620,135 680,120 740,110 800,100 840,95"/>
+        <!-- inline labels -->
+        <text class="scL" x="700" y="90" style="fill:#3730A3">treated (real)</text>
+        <text class="scL" x="700" y="176" style="fill:#6366F1">synthetic twin</text>
+        <text class="scL" x="640" y="210" style="fill:#1A2E05">gap = lift</text>
+        <!-- note squares -->
+        <rect x="66" y="300" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="scN" x="88" y="311" style="fill:#1E1B3A">The two lines are near-identical in the pre-period by construction - that tight fit is what licenses you to read the post-period gap as the effect.</text>
+        <rect x="66" y="324" width="14" height="14" rx="3" fill="#4F46E5"/>
+        <text class="scN" x="88" y="335" style="fill:#1E1B3A">Cumulative lift = the summed post-period gap; CausalImpact and pysyncon both return it with an uncertainty band.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - real treated revenue vs its synthetic counterfactual; the post-period gap is the estimated lift</figcaption>
+    </figure>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Five donor regions with weights that sum to one combine into a single synthetic treated unit.">
+        <style>
+          .dwBox { rx: 10; }
+          .dwT { font: 700 12px Inter, sans-serif; fill: #FFFFFF; }
+          .dwW { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .dwN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .dwArr { stroke: #C7C4DE; stroke-width: 2; fill: none; marker-end: url(#dwHead); }
+        </style>
+        <defs>
+          <marker id="dwHead" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#6366F1" stroke-width="1.6"/></marker>
+        </defs>
+        <text class="dwW" x="30" y="30">Donor pool (untreated regions)</text>
+        <!-- donors -->
+        <rect x="30" y="46" width="180" height="34" rx="10" fill="#3730A3"/><text class="dwT" x="46" y="68">US-NY · w = 0.31</text>
+        <rect x="30" y="90" width="180" height="34" rx="10" fill="#4F46E5"/><text class="dwT" x="46" y="112">US-TX · w = 0.24</text>
+        <rect x="30" y="134" width="180" height="34" rx="10" fill="#6366F1"/><text class="dwT" x="46" y="156">US-IL · w = 0.19</text>
+        <rect x="30" y="178" width="180" height="34" rx="10" fill="#6366F1"/><text class="dwT" x="46" y="200">US-WA · w = 0.16</text>
+        <rect x="30" y="222" width="180" height="34" rx="10" fill="#A5B4FC"/><text class="dwW" x="46" y="244" style="fill:#1E1B3A">US-FL · w = 0.10</text>
+        <!-- arrows to sum -->
+        <path class="dwArr" d="M214,63 C320,63 340,150 396,150"/>
+        <path class="dwArr" d="M214,107 C320,107 340,150 396,150"/>
+        <path class="dwArr" d="M214,151 L396,151"/>
+        <path class="dwArr" d="M214,195 C320,195 340,150 396,150"/>
+        <path class="dwArr" d="M214,239 C320,239 340,150 396,150"/>
+        <!-- weighted sum node -->
+        <rect x="400" y="128" width="150" height="46" rx="10" fill="#84CC16"/>
+        <text class="dwW" x="416" y="149" style="fill:#1A2E05">Σ wᵢ = 1.00</text>
+        <text class="dwN" x="416" y="166" style="fill:#1A2E05">weights ≥ 0</text>
+        <!-- arrow to synthetic -->
+        <path class="dwArr" d="M550,151 L648,151"/>
+        <rect x="652" y="120" width="196" height="62" rx="12" fill="#1E1B3A"/>
+        <text class="dwT" x="672" y="146">Synthetic US-CA</text>
+        <text class="dwN" x="672" y="166" style="fill:#A5B4FC">the treated region's twin</text>
+        <!-- note -->
+        <rect x="30" y="284" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="dwN" x="52" y="295" style="fill:#1E1B3A">Weights are picked to minimise pre-period fit error, are non-negative, and sum to 1 - so the synthetic unit stays inside the donors' range (no extrapolation).</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - a weighted blend of donor regions (weights sum to 1) becomes the synthetic treated unit</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>Placebo tests = permutation inference<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>With only a handful of regions, classical standard errors are shaky. SCM borrows an idea from permutation testing: pretend each <em>donor</em> region was the treated one, run the whole SCM on it, and collect its post-period gap. That gives you a distribution of "placebo" effects under no real treatment. If your genuine treated region's gap is extreme relative to that placebo distribution, the effect is unlikely to be noise. A common summary is the ratio of post- to pre-period fit error: the real unit should sit in the tail.</p>
+        <div class="callout tip">
+          <strong>Fit first, or nothing else counts</strong>
+          If the pre-period RMSPE is large - the synthetic never matched the treated region before treatment - stop. A bad pre-fit means the post-period gap is measuring model failure, not the burst. Report the pre-period fit alongside every SCM estimate.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Assemble the geo panel and pick treated vs donors <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">Lumen has 9 US regions in the <code>geo</code> field and 52 weeks of pre-period <code>spend_weekly</code> revenue. We treat a subset with a CTV burst and hold the rest out as the donor pool. First, shape the data into a region-by-week revenue panel.</p>
+    <div class="steps">
+      <div class="step"><p>Pivot weekly revenue into a wide panel - one column per region, one row per week - and mark the intervention week:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_geo_panel.py</span>
+<pre>import pandas as pd, numpy as np
+
+sw = pd.read_parquet("lumen_spend_weekly.parquet")   # week, channel, geo, revenue, ...
+panel = (sw.groupby(["week", "geo"], as_index=False)["revenue"].sum()
+           .pivot(index="week", columns="geo", values="revenue")
+           .sort_index())
+
+INTERVENTION = pd.Timestamp("2026-04-06")   # CTV burst goes live
+pre  = panel.loc[panel.index &lt;  INTERVENTION]   # 52 pre-period weeks
+post = panel.loc[panel.index &gt;= INTERVENTION]
+print(panel.shape, "regions:", list(panel.columns))</pre>
+        </div>
+      </div>
+      <div class="step"><p>Choose the treated region and a clean donor pool - drop any region that could receive spillover from the treated media market:</p>
+        <div class="prompt-box good">
+          <span class="label">pick_units.py</span>
+<pre>treated = "US-CA"                                  # got the CTV burst
+adjacent = ["US-NV"]                               # shares a media market -> contaminated
+donors = [g for g in panel.columns
+          if g not in [treated] + adjacent]         # clean donor pool
+print("treated:", treated, "| donors:", donors)
+
+# sanity: donors must be UNAFFECTED by the burst (no spillover) - SUTVA at the geo level</pre>
+        </div>
+      </div>
+      <div class="step"><p>Eyeball the pre-period correlations between the treated region and each donor. Good donors move with the treated region <em>before</em> treatment - that is what makes a tight synthetic fit possible.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Fit the counterfactual and read the lift <span class="tag demo">★ 9 min · everyone</span></h2>
+    </div>
+    <p class="lede">Two credible ways to build the counterfactual. Fit CausalImpact (a Bayesian structural time-series forecast from the donors) and a classic synthetic control with pysyncon, then compare their estimated lift and interval.</p>
+    <div class="steps">
+      <div class="step"><p>CausalImpact - forecast what US-CA would have earned without the burst from the donor series:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2a_causalimpact.py</span>
+<pre>from causalimpact import CausalImpact   # tfcausalimpact / pycausalimpact
+
+# response = treated region first, then donor covariates
+data = panel[[treated] + donors].copy()
+pre_period  = [str(panel.index.min().date()), "2026-03-30"]
+post_period = ["2026-04-06", str(panel.index.max().date())]
+
+ci = CausalImpact(data, pre_period, post_period)
+print(ci.summary())            # abs + relative effect, 95% credible interval
+# ci.plot()  -> observed vs counterfactual, pointwise gap, cumulative lift</pre>
+        </div>
+      </div>
+      <div class="step"><p>Synthetic control with pysyncon - solve for donor weights that match the pre-period, then read the post-period gap:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2b_pysyncon.py</span>
+<pre>from pysyncon import Dataprep, Synth
+
+long = panel.reset_index().melt(id_vars="week", var_name="geo", value_name="revenue")
+prep = Dataprep(
+    foo=long, predictors=["revenue"], predictors_op="mean",
+    dependent="revenue", unit_variable="geo", time_variable="week",
+    treatment_identifier=treated, controls_identifier=donors,
+    time_predictors_prior=list(pre.index), time_optimize_ssr=list(pre.index),
+)
+synth = Synth(); synth.fit(dataprep=prep)
+print(synth.weights())                     # donor weights, sum to 1
+att = synth.att(time_period=list(post.index))
+print("estimated ATT (weekly lift):", att)  # gap between real and synthetic</pre>
+        </div>
+      </div>
+      <div class="step"><p>Read both numbers the same way: the cumulative post-period gap is the estimated incremental revenue from the burst. Report it with the interval and - critically - the pre-period fit quality. If CausalImpact and pysyncon roughly agree, that convergence is itself reassuring.</p></div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>Lumen's finance team will not fund a channel on "revenue went up." They will fund "the synthetic twin says US-CA would have made about $X without CTV; it made about $Y; the $Y-minus-$X gap sits outside the placebo distribution." That sentence is what SCM buys you.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>Validate it - pre-fit and placebo permutation <span class="tag demo">★ 7 min · everyone</span></h2>
+    </div>
+    <p class="lede">An SCM estimate is only as good as its checks. Confirm the pre-period fit is tight, then run the placebo test: treat each donor as if it were the treated unit and see whether the real effect is extreme against that distribution.</p>
+    <div class="steps">
+      <div class="step"><p>Check pre-period fit with RMSPE - the synthetic must track the treated region before the burst:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3a_prefit.py</span>
+<pre>def rmspe(actual, synthetic):
+    return np.sqrt(np.mean((actual - synthetic) ** 2))
+
+pre_fit = rmspe(pre[treated].values, synth_pre_values)   # from the fitted model
+print(f"pre-period RMSPE = {pre_fit:.1f}")
+# rule of thumb: pre-RMSPE should be small vs the revenue scale.
+# if it is large, the synthetic never matched -> do NOT trust the post gap</pre>
+        </div>
+      </div>
+      <div class="step"><p>Placebo permutation - refit SCM pretending each donor was treated, then compare gaps:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3b_placebo.py</span>
+<pre>placebo_gaps = {}
+for g in donors:
+    fake_donors = [d for d in donors if d != g]
+    gap = fit_scm_gap(panel, treated=g, donors=fake_donors,   # your demo-2 fit, reused
+                      pre=pre.index, post=post.index)
+    placebo_gaps[g] = gap                                      # post-period effect if "treated"
+
+real_gap = fit_scm_gap(panel, treated=treated, donors=donors,
+                       pre=pre.index, post=post.index)
+
+# ratio of post- to pre-period RMSPE puts every unit on one scale
+ranks = sorted([real_gap] + list(placebo_gaps.values()), reverse=True)
+p_perm = (ranks.index(real_gap) + 1) / (len(ranks))
+print(f"permutation p ≈ {p_perm:.3f}  (real effect should sit in the tail)")</pre>
+        </div>
+      </div>
+      <div class="step"><p>If the real region's gap is the most extreme (or near it) among all placebos, the burst effect is unlikely to be an artifact. If a placebo donor shows an equally large "effect", your model is picking up noise - tighten the donor pool or the pre-period.</p></div>
+    </div>
+    <div class="callout tip">
+      <strong>Credibility is a chain, not a number</strong>
+      Good pre-fit → sensible donor weights → a post-period gap → a placebo distribution that makes the gap look extreme. Break any link and the estimate is decoration. SCM's honesty is that it forces you to show every link.
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 9</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Swap the donor pool.</strong> Drop your two highest-weight donors and refit. Watch the estimate and the pre-period fit move - this is how sensitive SCM is to the pool, and why donor choice is a decision you must defend.</li>
+      <li><strong>Placebo on an untreated region.</strong> Pick a donor that got no burst, treat it as the treated unit, and run the full pipeline. The effect should be near zero - if it is not, your model is over-fitting.</li>
+      <li><strong>Compare the two engines.</strong> Put the CausalImpact cumulative lift and the pysyncon ATT side by side. Where they disagree, explain why (BSTS priors vs convex donor weights).</li>
+      <li><strong>Optional:</strong> re-run with a deliberately contaminated donor (add back the adjacent region) and show how spillover shrinks the measured effect - the SUTVA violation, quantified.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · In the synthetic control method, the donor weights are chosen to...</p>
+      <button class="qopt" type="button">A · maximise the post-treatment gap</button>
+      <button class="qopt" type="button">B · make every donor contribute equally</button>
+      <button class="qopt" type="button">C · match the treated unit's pre-treatment outcomes as closely as possible</button>
+      <p class="qwhy">Weights (non-negative, summing to 1) are fit on the pre-period so the synthetic twin tracks the treated unit before treatment. The post-period gap is then read as the effect - a tight pre-fit is the credibility test.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">2 · A placebo test in SCM works by...</p>
+      <button class="qopt" type="button">A · applying SCM to each donor as if it were treated, then checking the real effect is extreme vs that distribution</button>
+      <button class="qopt" type="button">B · running the test again with a bigger sample</button>
+      <button class="qopt" type="button">C · randomly shuffling the outcome column</button>
+      <p class="qwhy">Permutation inference: refit SCM treating each untreated donor as the treated unit to build a distribution of placebo effects. If the genuine treated region's gap sits in the tail, the effect is unlikely to be noise.</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">3 · Which statement is correct about the tooling?</p>
+      <button class="qopt" type="button">A · "Google GeoLift" is the standard synthetic-control package</button>
+      <button class="qopt" type="button">B · GeoLift is Meta's (SCM-based); Google's tools are Geo experiments and CausalImpact (BSTS)</button>
+      <button class="qopt" type="button">C · CausalImpact and synthetic control are the same algorithm</button>
+      <p class="qwhy">GeoLift is Meta's and built on SCM. Google's lineage is Vaver-Koehler geo experiments plus Brodersen's CausalImpact (Bayesian structural time series). There is no "Google GeoLift".</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">Geo + synthetic control is a genuine gap on every platform we surveyed - we teach it here from the primary sources. The deep econometric proofs stay in the papers and the Udemy econometrics course.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Geo holdout, donor pool, pre-fit, placebo tests, CausalImpact</span><span class="note">Parts 1-2 + all three build-alongs on Lumen's 9 regions</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Synthetic control weights, credibility chain</span><span class="note">pysyncon + permutation inference - build-alongs 2-3</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Abadie-Gardeazabal 2003; Abadie-Diamond-Hainmueller 2010</span><span class="note">the Basque Country and California Prop 99 papers - primary sources</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Econometrics &amp; Statistics for Business (Resende, Udemy)</span><span class="note">CausalImpact code depth - extends the fit here</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Meta GeoLift / Google geo methodology docs</span><span class="note">vendor implementations - named, not operated</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 8 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Geo experiment</b><span>Randomize or select regions when you cannot randomize people (TV/CTV, privacy). Region is the unit.</span></div>
+      <div class="cheat-item"><b>Synthetic control</b><span>Build a treated twin as a weighted (≥0, Σ=1) blend of donors that matches the pre-period. Post gap = effect.</span></div>
+      <div class="cheat-item"><b>Clean donors</b><span>Donor pool must be unaffected by treatment - no spillover. Geo-level SUTVA. Drop adjacent markets.</span></div>
+      <div class="cheat-item"><b>Pre-fit is the test</b><span>Small pre-period RMSPE licenses the post gap. Bad fit = you are measuring model failure.</span></div>
+      <div class="cheat-item"><b>Placebo inference</b><span>Refit SCM on each donor as if treated; the real effect should be extreme vs the placebo distribution.</span></div>
+      <div class="cheat-item"><b>Names</b><span>GeoLift = Meta (SCM). Google = Geo experiments (Vaver-Koehler) + CausalImpact (BSTS). No "Google GeoLift".</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 8 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b7-cuped-variance-reduction.html">← Prev: CUPED and variance reduction</a> &nbsp;·&nbsp; <a href="b9-difference-in-differences.html">Next: Difference-in-differences →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

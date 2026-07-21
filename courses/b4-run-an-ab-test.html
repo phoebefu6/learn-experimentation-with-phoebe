@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder session 4 · Run and analyze an A/B test - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Builder session 4 of 10</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Builder session 4 of 10</div>
+    <h1>Run and analyze an A/B test, <span class="accent">and report it honestly</span></h1>
+    <p class="sub">This is the payoff session. Lumen ran the hero-first product-page test - control 3.2% vs variant 3.6% on ~32,000 users per arm - and now the numbers are in. You will analyze it end to end in statsmodels: the two-proportion z-test, a confidence interval on the difference, effect size as absolute and relative lift, and the trap that sinks most real readouts - testing many metrics at once and celebrating the one that crossed 0.05 by luck. By the end you can defend a ship decision, not just announce one.</p>
+    <div class="chip-row">
+      <span class="chip level">🟡 Core</span>
+      <span class="chip audience">Builders · DA / DE / DS</span>
+      <span class="chip audience">Python · statsmodels</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:3">3-14 · The test + effect size</span>
+      <span class="a3" style="flex:5">14-40 · Analyze it in Python</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The readout everyone gets wrong</h2>
+    </div>
+    <p class="lede">Sessions b1-b3 got you a trustworthy test: a clean estimand, enough power, and a randomization you can defend. Now the data has landed and someone wants a number by end of day. The failure mode is not the arithmetic - statsmodels does that in one line. The failure mode is the story around it: quoting a lift with no interval, confusing "statistically significant" with "worth shipping", and running an eye over five metrics until one crosses 0.05. Today we do the whole readout the way a staff data scientist would - the test, the interval, the effect size, and the multiple-comparisons correction that keeps you honest.</p>
+    <div class="legend">
+      <span class="pill solid">Live - built in session</span>
+      <span class="pill light">Self-study - read after class</span>
+      <span class="pill amber">★ Build-along - everyone codes it</span>
+      <span class="pill inkpill">The data: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      A notebook that (1) runs the two-proportion z-test on Lumen's real conversion counts and returns z, p, and a CI on the difference, (2) reports absolute and relative lift with an interval and asks "significant AND practically meaningful?", and (3) tests five metrics at once, then applies Bonferroni and Benjamini-Hochberg and watches a naive "winner" evaporate. This is the readout you paste into the ship-decision doc.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: THE TEST ============ -->
+  <section class="section" id="two-proportion">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the test</span>
+      <h2>The two-proportion z-test, piece by piece <span class="tag concept">6 min live</span></h2>
+    </div>
+    <p class="lede">Conversion is a binary outcome per user - bought or did not - so each arm is a proportion. To ask whether variant 3.6% beats control 3.2%, we compare two proportions. The z-test pools the two arms into one rate under the null (they are equal), builds a standard error from that pooled rate, and measures how many standard errors apart the observed difference sits. Big z, small p. But the p-value alone never ships a change - you also need the interval on the difference, because that is what tells you the plausible size of the effect.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of the two-proportion z-test: control rate and variant rate feed a pooled standard error, which produces a z statistic and a p-value, plus a confidence interval on the difference.">
+        <style>
+          .zpT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .zpL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
+          .zpC { font: 600 12px Inter, sans-serif; fill: #1E1B3A; }
+          .zpN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .zpA { stroke: #6366F1; stroke-width: 2.5; fill: none; marker-end: url(#zpAh); }
+        </style>
+        <defs>
+          <marker id="zpAh" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#6366F1" stroke-width="1.6"/></marker>
+        </defs>
+        <!-- inputs -->
+        <rect x="18" y="40" width="200" height="52" rx="10" fill="#3730A3"/>
+        <text class="zpT" x="36" y="63">Control</text>
+        <text class="zpN" x="36" y="82" style="fill:#E7E5F2">1024 / 32000 = 3.2%</text>
+        <rect x="18" y="110" width="200" height="52" rx="10" fill="#4F46E5"/>
+        <text class="zpT" x="36" y="133">Variant</text>
+        <text class="zpN" x="36" y="152" style="fill:#E7E5F2">1152 / 32000 = 3.6%</text>
+        <!-- pooled SE -->
+        <rect x="300" y="66" width="210" height="70" rx="10" fill="#6366F1"/>
+        <text class="zpT" x="318" y="92">Pooled rate p&#772; = 3.4%</text>
+        <text class="zpN" x="318" y="112" style="fill:#EEF2FF">SE = &#8730;( p&#772;(1-p&#772;)(1/n&#8321;+1/n&#8322;) )</text>
+        <text class="zpN" x="318" y="128" style="fill:#EEF2FF">= 0.00143</text>
+        <path class="zpA" d="M218,66 L298,92"/>
+        <path class="zpA" d="M218,136 L298,112"/>
+        <!-- z -->
+        <rect x="588" y="40" width="274" height="52" rx="10" fill="#A5B4FC"/>
+        <text class="zpL" x="606" y="63">z = (0.036 - 0.032) / SE</text>
+        <text class="zpN" x="606" y="82" style="fill:#1E1B3A">= 0.004 / 0.00143 &#8776; 2.79</text>
+        <path class="zpA" d="M510,90 L586,72"/>
+        <!-- p -->
+        <rect x="588" y="110" width="274" height="52" rx="10" fill="#84CC16"/>
+        <text class="zpL" x="606" y="133" style="fill:#1A2E05">p (two-sided) &#8776; 0.005</text>
+        <text class="zpN" x="606" y="152" style="fill:#1A2E05">below 0.05 - reject the null</text>
+        <path class="zpA" d="M725,92 L725,108"/>
+        <!-- CI band -->
+        <rect x="18" y="196" width="844" height="2" fill="#C7C4DE"/>
+        <text class="zpL" x="18" y="222">And the part the p-value hides - the CI on the difference:</text>
+        <line x1="120" y1="262" x2="760" y2="262" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="120" y1="256" x2="120" y2="268" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="760" y1="256" x2="760" y2="268" stroke="#C7C4DE" stroke-width="2"/>
+        <line x1="200" y1="256" x2="200" y2="268" stroke="#6B6785" stroke-width="2"/>
+        <text class="zpN" x="176" y="286">0 (no effect)</text>
+        <rect x="300" y="253" width="300" height="18" rx="6" fill="#4F46E5"/>
+        <line x1="450" y1="248" x2="450" y2="276" stroke="#1E1B3A" stroke-width="2"/>
+        <text class="zpC" x="418" y="244">diff = 0.4pp</text>
+        <text class="zpN" x="286" y="292" style="fill:#4F46E5">95% CI &#8776; [0.1pp, 0.7pp] - excludes 0, so significant</text>
+        <!-- note squares -->
+        <rect x="18" y="308" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="zpN" x="40" y="319" style="fill:#1E1B3A">The z-test pools rates under the null; the CI on the difference uses the unpooled SE - two SEs, do not mix them up.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - two rates in, a pooled SE, a z, a p-value, and the interval that actually sizes the effect</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>Why the interval matters more than the p-value<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A p-value answers one narrow question: "if the true effect were zero, how surprising is this data?" It says nothing about how <em>big</em> the effect is. Two tests can both hit p = 0.005 while one has a CI of [0.1pp, 0.7pp] and the other [3pp, 9pp] - wildly different business cases. The confidence interval on the difference carries the magnitude, so read it first.</p>
+        <ul>
+          <li><strong>z-test SE (pooled)</strong> - assumes the null is true (both arms share one rate p&#772;). Used to compute z and p.</li>
+          <li><strong>CI SE (unpooled)</strong> - uses each arm's own rate. Used to build the interval on the difference.</li>
+          <li><strong>Decision rule</strong> - the 95% CI excluding 0 is equivalent to a two-sided test at &#945; = 0.05, but the CI also hands you the plausible range.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>A deck says "variant won, p = 0.03, ship it." You ask for the interval; it is [0.02pp, 0.9pp]. The lower bound is a rounding error - the test is technically significant but the effect might be trivially small. "Significant" bought you "probably not zero", not "worth the engineering cost". Always ask for the interval.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode live">Live</span>Effect size: absolute lift vs relative lift<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>The same win reads two ways, and stakeholders hear them very differently. State both, and label which is which.</p>
+        <table class="clean">
+          <thead><tr><th>Measure</th><th>Formula</th><th>Lumen value</th></tr></thead>
+          <tbody>
+            <tr><td><b>Absolute lift</b></td><td>p&#8321; - p&#8320;</td><td>3.6% - 3.2% = <b>0.4pp</b></td></tr>
+            <tr><td><b>Relative lift</b></td><td>(p&#8321; - p&#8320;) / p&#8320;</td><td>0.004 / 0.032 = <b>+12.5%</b></td></tr>
+          </tbody>
+        </table>
+        <div class="callout tip">
+          <strong>"+12.5%" and "0.4pp" are the same number</strong>
+          Relative lift sounds bigger and belongs in the headline; absolute lift (percentage points) is what actually moves revenue and belongs in the model. A finance partner who hears "+12.5%" and budgets against a 12.5-point rate jump will be badly wrong. Quote both, always with the interval and the guardrail check from canon (latency, refund rate, add-to-cart).
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: MULTIPLE COMPARISONS ============ -->
+  <section class="section" id="multiple-comparisons">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the trap</span>
+      <h2>Test many metrics, invent a winner <span class="tag concept">4 min live</span></h2>
+    </div>
+    <p class="lede">Every test at &#945; = 0.05 has a 5% chance of a false positive when nothing is going on. Test one metric, that risk is 5%. Test 20 metrics, you expect about one to cross 0.05 by pure luck - and the more you slice (per device, per geo, per product line), the surer you are to "find" something. This is the multiple-comparisons problem, and it is why dashboards full of green stars are so often noise. Two corrections tame it: <strong>Bonferroni</strong> tests each metric at &#945;/m, which controls the family-wise error rate but is conservative; <strong>Benjamini-Hochberg</strong> controls the false discovery rate and is more powerful when you have many metrics.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Twenty metrics each tested at alpha 0.05: about one lights up as a false positive. A correction darkens it back to not significant.">
+        <style>
+          .mcT { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .mcN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .mcS { font: 700 15px Inter, sans-serif; fill: #1A2E05; }
+        </style>
+        <text class="mcT" x="18" y="30">20 metrics tested at &#945; = 0.05, and the truth is: none of them changed</text>
+        <!-- grid of 20 cells, 10 x 2 -->
+        <!-- row 1 -->
+        <g>
+          <rect x="18" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="102" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="186" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="270" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="354" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="438" y="48" width="76" height="40" rx="7" fill="#84CC16"/>
+          <text class="mcS" x="468" y="73">&#9733;</text>
+          <rect x="522" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="606" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="690" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="774" y="48" width="76" height="40" rx="7" fill="#EEF2FF"/>
+        </g>
+        <!-- row 2 -->
+        <g>
+          <rect x="18" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="102" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="186" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="270" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="354" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="438" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="522" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="606" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="690" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+          <rect x="774" y="98" width="76" height="40" rx="7" fill="#EEF2FF"/>
+        </g>
+        <text class="mcN" x="438" y="158" style="fill:#DC2626">this one "won" at p &lt; 0.05 - a false positive, expected ~1 in 20</text>
+        <!-- after correction -->
+        <rect x="18" y="182" width="844" height="2" fill="#C7C4DE"/>
+        <text class="mcT" x="18" y="212">After a correction (Bonferroni tests each at &#945;/20 = 0.0025):</text>
+        <g>
+          <rect x="18" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="102" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="186" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="270" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="354" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="438" y="228" width="76" height="40" rx="7" fill="#E7E5F2" stroke="#DC2626" stroke-width="2" stroke-dasharray="4 3"/>
+          <rect x="522" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="606" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="690" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+          <rect x="774" y="228" width="76" height="40" rx="7" fill="#E7E5F2"/>
+        </g>
+        <text class="mcN" x="418" y="292" style="fill:#1E1B3A">the star is gone - corrected away</text>
+        <!-- note -->
+        <rect x="18" y="300" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="mcN" x="40" y="311" style="fill:#1E1B3A">Decide your metric list before you look. Bonferroni controls FWER (conservative); Benjamini-Hochberg controls FDR (more power with many metrics).</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - 20 metrics, ~1 false positive expected; a correction darkens it back to not significant</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode self">Self-study</span>FWER vs FDR - which correction, when<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>The two corrections control different things, so pick by how costly a false positive is.</p>
+        <ul>
+          <li><strong>Family-wise error rate (FWER)</strong> - the chance of <em>any</em> false positive across the whole family. <strong>Bonferroni</strong> holds it at &#945; by testing each hypothesis at &#945;/m. Simple, conservative, loses power fast as m grows. Use it when even one false ship is expensive (a guardrail claim, a launch gate).</li>
+          <li><strong>False discovery rate (FDR)</strong> - the expected <em>proportion</em> of your declared winners that are false. <strong>Benjamini-Hochberg</strong> sorts the p-values and compares each to a rising threshold (i/m)&#945;, tolerating a few false positives to keep more true ones. Use it for exploratory metric sweeps where missing a real effect costs more than chasing a spurious one.</li>
+          <li><strong>Either way</strong> - the primary decision metric (Lumen conversion) is pre-registered and read on its own; corrections apply to the <em>secondary</em> metric sweep, not the one headline test.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ BUILD-ALONG 1 ============ -->
+  <section class="section" id="demo-1">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 1 of 3</span>
+      <h2>Run the two-proportion z-test on Lumen <span class="tag demo">★ 9 min · everyone</span></h2>
+    </div>
+    <p class="lede">The test came back: control 3.2% (1024 of 32000), variant 3.6% (1152 of 32000). We run the z-test and, in the same breath, the confidence interval on the difference - because a p-value without an interval is half a readout.</p>
+    <div class="steps">
+      <div class="step"><p>Feed the counts to <code>proportions_ztest</code>. Order variant first so a positive z means "variant higher":</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_ztest.py</span>
+<pre>import numpy as np
+from statsmodels.stats.proportion import proportions_ztest, confint_proportions_2indep
+
+# Lumen hero-first product-page test, primary metric = checkout conversion
+n_ctrl, n_var       = 32_000, 32_000
+conv_ctrl, conv_var = 1024,   1152          # 3.2% vs 3.6%
+
+count = np.array([conv_var, conv_ctrl])     # successes, variant first
+nobs  = np.array([n_var,   n_ctrl])         # trials
+
+z, p = proportions_ztest(count, nobs, alternative='two-sided')
+print(f"z = {z:.3f}   p = {p:.4f}")         # z &#8776; 2.79   p &#8776; 0.005</pre>
+        </div>
+      </div>
+      <div class="step"><p>Now the interval on the difference in rates (variant minus control). This uses the unpooled SE, so it is the number you quote for effect magnitude:</p>
+        <div class="prompt-box good">
+          <span class="label">demo1_diff_ci.py</span>
+<pre>low, high = confint_proportions_2indep(
+    conv_var, n_var, conv_ctrl, n_ctrl,
+    compare='diff', alpha=0.05)
+
+print(f"diff 95% CI = [{low:.4f}, {high:.4f}]")
+# &#8776; [0.0012, 0.0068]  ->  [0.12pp, 0.68pp], excludes 0</pre>
+        </div>
+      </div>
+      <div class="step"><p>Read it honestly. p &#8776; 0.005 clears 0.05, and the CI excludes zero - so the result is <em>statistically</em> significant. But the lower bound is only 0.12pp. Before you write "ship", ask the second question: is 0.4pp <em>practically</em> meaningful for Lumen at $18M/yr revenue, and did any guardrail (latency, refund, add-to-cart) move against us? Significance is a gate, not a decision.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 2 ============ -->
+  <section class="section" id="demo-2">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 2 of 3</span>
+      <h2>Effect size and the lift interval <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">A single "the variant won" is not a report. We compute both flavours of lift and put an interval on the relative lift, then say out loud where statistical significance and practical significance diverge.</p>
+    <div class="steps">
+      <div class="step"><p>Absolute lift is percentage points; relative lift divides by the control rate:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_effect_size.py</span>
+<pre>p_ctrl, p_var = conv_ctrl / n_ctrl, conv_var / n_var   # 0.032, 0.036
+
+abs_lift = p_var - p_ctrl                # 0.004  -> 0.4pp
+rel_lift = abs_lift / p_ctrl             # 0.125  -> +12.5%
+print(f"absolute lift = {abs_lift*100:.2f}pp")
+print(f"relative lift = {rel_lift*100:.1f}%")</pre>
+        </div>
+      </div>
+      <div class="step"><p>Turn the CI on the difference into a CI on the <em>relative</em> lift by dividing the bounds by the control rate - this is what a stakeholder actually wants to hear:</p>
+        <div class="prompt-box good">
+          <span class="label">demo2_lift_ci.py</span>
+<pre>rel_low, rel_high = low / p_ctrl, high / p_ctrl
+print(f"relative lift 95% CI = [{rel_low*100:.1f}%, {rel_high*100:.1f}%]")
+# &#8776; [3.7%, 21.3%]  ->  point estimate +12.5%, but the true lift
+# could plausibly be as small as ~4% or as large as ~21%</pre>
+        </div>
+      </div>
+      <div class="step"><p>State it in one sentence, both scales, with the interval: <em>"Conversion rose 0.4pp (from 3.2% to 3.6%), a +12.5% relative lift, 95% CI [3.7%, 21.3%]; significant at &#945;=0.05, guardrails held."</em> Statistical vs practical: the effect is real, but the wide interval means finance should model the <em>lower</em> bound, not the point estimate, before committing revenue to it.</p></div>
+    </div>
+    <div class="callout example">
+      <span class="ex-pill">Real world</span>
+      <p>A team ships on "+12.5% conversion" and forecasts a 12.5% revenue jump. Two things go wrong: 12.5% is relative (0.4 points, not 12.5 points), and it was the top of a wide interval. The realised lift lands near the lower bound and someone asks why the model missed by 3x. Quoting the interval up front is how you avoid that meeting.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUILD-ALONG 3 ============ -->
+  <section class="section" id="demo-3">
+    <div class="section-kicker">
+      <span class="klabel">Build-along 3 of 3</span>
+      <h2>Five metrics, and a winner that evaporates <span class="tag demo">★ 8 min · everyone</span></h2>
+    </div>
+    <p class="lede">The product team did not just watch conversion. They eyeballed AOV, add-to-cart, refund rate, and page latency too - and refund rate "improved" at p = 0.048. We correct for the five simultaneous tests with <code>multipletests</code> and watch that naive win disappear.</p>
+    <div class="steps">
+      <div class="step"><p>Line up the five raw p-values, one per secondary metric:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_metrics.py</span>
+<pre>from statsmodels.stats.multitest import multipletests
+
+metrics = ["conversion", "add_to_cart", "AOV", "refund_rate", "latency"]
+pvals   = [0.005,        0.009,         0.028,  0.048,         0.55]
+m = len(pvals)
+
+naive = [p &lt; 0.05 for p in pvals]
+print("naive winners (&#945;=0.05):", [x for x, w in zip(metrics, naive) if w])
+# ['conversion', 'add_to_cart', 'AOV', 'refund_rate'] - 4 "wins"</pre>
+        </div>
+      </div>
+      <div class="step"><p>Apply Bonferroni (FWER) and Benjamini-Hochberg (FDR) with one call each:</p>
+        <div class="prompt-box good">
+          <span class="label">demo3_correct.py</span>
+<pre>bonf = multipletests(pvals, alpha=0.05, method='bonferroni')[0]
+bh   = multipletests(pvals, alpha=0.05, method='fdr_bh')[0]
+
+print("Bonferroni survivors:", [x for x, s in zip(metrics, bonf) if s])
+# ['conversion', 'add_to_cart']   (threshold 0.05/5 = 0.01)
+print("Benjamini-Hochberg :",     [x for x, s in zip(metrics, bh)   if s])
+# ['conversion', 'add_to_cart', 'AOV']   (more powerful - keeps AOV)</pre>
+        </div>
+      </div>
+      <div class="step"><p>Watch refund_rate (p = 0.048) vanish under both corrections - it was a naive winner manufactured by testing five things at once. Note the difference in power too: Bonferroni keeps 2 metrics, Benjamini-Hochberg keeps 3, because BH tolerates a controlled false-discovery <em>rate</em> instead of forbidding any single false positive. The headline conversion result survives every correction - which is exactly why we pre-registered it as the primary metric and read it on its own.</p></div>
+    </div>
+    <div class="callout tip">
+      <strong>Pre-register the primary metric, correct the rest</strong>
+      One decision metric, declared before launch, read at face value. Every other metric you glance at inflates your false-positive rate, so it goes through Bonferroni or BH. "We looked at 20 things and one was significant" is not a finding - it is the definition of the multiple-comparisons trap.
+    </div>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 5</span>
+      <h2>This week <span class="tag exercise">◐ 40 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Bootstrap the CI to cross-check.</strong> Resample each arm with replacement 10,000 times, recompute the difference in rates each time, and take the 2.5th / 97.5th percentiles. Confirm the bootstrap interval lands close to the analytic <code>confint_proportions_2indep</code> result - two independent methods agreeing is your sanity check.</li>
+      <li><strong>Re-run the sweep with more metrics.</strong> Add device and geo splits until you have ~15 secondary metrics, feed random-ish p-values, and watch how many "winners" Bonferroni vs BH keep. Feel the power gap widen as m grows.</li>
+      <li><strong>Flip absolute and relative.</strong> Recompute the lift assuming the baseline were 8% instead of 3.2%. Same 0.4pp absolute lift, but the relative lift shrinks to +5% - see why baseline choice changes the headline.</li>
+      <li><strong>Sequential teaser.</strong> You analyzed this test <em>once</em>, at the pre-committed N of ~32,000/arm. What if a PM had peeked on day 3 and called it early? That is the peeking problem - fixed-horizon p-values are only valid at the planned N, and repeated looks can push Type I error past 30%. We fix it properly in <strong>b6 (sequential testing and peeking)</strong>.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">1 · A test is significant (p = 0.03) with a 95% CI on the difference of [0.02pp, 0.9pp]. What is the honest read?</p>
+      <button class="qopt" type="button">A · ship immediately, the effect is large</button>
+      <button class="qopt" type="button">B · the result is invalid because the CI is wide</button>
+      <button class="qopt" type="button">C · probably a real effect, but possibly tiny - check practical significance and guardrails before shipping</button>
+      <p class="qwhy">The CI excludes zero (so it is significant) but its lower bound is near zero, so the effect could be trivially small. Significance is a gate; the interval and the business case decide the ship.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">2 · Lumen went from 3.2% to 3.6%. Which statement is correct?</p>
+      <button class="qopt" type="button">A · absolute lift 0.4pp, relative lift +12.5% - they describe the same change</button>
+      <button class="qopt" type="button">B · the conversion rate rose by 12.5 percentage points</button>
+      <button class="qopt" type="button">C · absolute and relative lift are always equal</button>
+      <p class="qwhy">Absolute lift is 3.6 - 3.2 = 0.4pp; relative lift is 0.4/3.2 = +12.5%. Same win, two scales. Confusing the relative figure for percentage points is a classic forecasting error.</p>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">3 · You test 5 metrics at &#945;=0.05 and one crosses at p=0.048. Why correct, and how do Bonferroni and BH differ?</p>
+      <button class="qopt" type="button">A · no need to correct - 0.048 is below 0.05</button>
+      <button class="qopt" type="button">B · testing many metrics inflates false positives; Bonferroni tests each at &#945;/m (controls FWER, conservative), BH controls the FDR and is more powerful</button>
+      <button class="qopt" type="button">C · corrections make the sample larger</button>
+      <p class="qwhy">Each test carries a 5% false-positive risk, so five tests inflate the chance one crosses by luck. Bonferroni caps the family-wise error at &#945; but loses power; Benjamini-Hochberg controls the false discovery rate and keeps more true effects.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">Analyzing a two-arm test is the working core of every A/B course. We teach ~80% of the practical readout here - the test, the interval, effect size, and multiple comparisons; the fuller inference theory and platform-specific stats engines live in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Two-proportion z-test, pooled vs unpooled SE, CI on the difference</span><span class="note">statsmodels - Part 1, build-along 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Effect size: absolute lift, relative lift, statistical vs practical significance</span><span class="note">Part 1, build-along 2 + guardrails from canon</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Multiple comparisons: Bonferroni (FWER) vs Benjamini-Hochberg (FDR)</span><span class="note">statsmodels.stats.multitest - Part 2, build-along 3</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">A/B Testing in Python (365 Data Science, Kuznetsova)</span><span class="note">most on-point platform course - full worked examples</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">The Power of Statistics (Google GADA C3)</span><span class="note">hypothesis-testing + CI foundations in depth</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Builder Session 4 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Two-proportion z-test</b><span>Pool the arms under the null: p&#772;, SE = &#8730;(p&#772;(1-p&#772;)(1/n&#8321;+1/n&#8322;)), z = diff/SE. <code>proportions_ztest</code>.</span></div>
+      <div class="cheat-item"><b>CI on the difference</b><span>Uses the unpooled SE. <code>confint_proportions_2indep(..., compare='diff')</code>. CI excludes 0 &#8801; significant at &#945;=0.05.</span></div>
+      <div class="cheat-item"><b>Absolute vs relative lift</b><span>abs = p&#8321;-p&#8320; (percentage points); rel = (p&#8321;-p&#8320;)/p&#8320;. Lumen: 0.4pp = +12.5%. Quote both.</span></div>
+      <div class="cheat-item"><b>Significant &#8800; meaningful</b><span>p-value = "probably not zero". Read the interval for magnitude, then check practical value + guardrails.</span></div>
+      <div class="cheat-item"><b>Multiple comparisons</b><span>Test m metrics, expect ~m&#215;0.05 false positives. Pre-register the primary; correct the rest.</span></div>
+      <div class="cheat-item"><b>Bonferroni vs BH</b><span>Bonferroni: each at &#945;/m, controls FWER, conservative. Benjamini-Hochberg: controls FDR, more powerful. <code>multipletests</code>.</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Builder session 4 of 10 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="b3-randomization-and-trust.html">← Prev: Randomization and trust</a> &nbsp;·&nbsp; <a href="b5-multivariate-testing.html">Next: Multivariate testing →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>

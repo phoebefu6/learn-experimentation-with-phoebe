@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leader session 4 · Beyond the button - learn experimentation with phoebe</title>
+<link rel="stylesheet" href="../assets/style.css?v=1">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="crumb"><a href="../index.html">learn-experimentation-with-phoebe</a> / Leader session 4 of 6</span>
+    <button class="btn" id="toggle-all" type="button">Expand all</button>
+    <button class="btn primary" id="zoom-toggle" type="button">Projector zoom: off</button>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Learn Experimentation with Phoebe · Leader session 4 of 6</div>
+    <h1>Beyond the button, <span class="accent">when you can't A/B a person</span></h1>
+    <p class="sub">A clean user-level A/B test is a luxury. A TV spot, a billboard, an out-of-home burst, a privacy-limited channel, a brand campaign that spills across everyone - none of these can be split shopper by shopper. Yet these are often your biggest bets. This session gives you the leader's toolkit for causal answers when the button test is off the table: holdouts and incrementality, geo experiments, and why last-click reporting quietly overstates your paid channels. No math, no code - just knowing which tool fits which question.</p>
+    <div class="chip-row">
+      <span class="chip level">🟡 Core</span>
+      <span class="chip audience">Leaders · C-level / PM / marketing</span>
+      <span class="chip audience">No code</span>
+      <span class="chip time">45 min</span>
+    </div>
+    <div class="agenda">
+      <span class="a1" style="flex:1">0-3 · Setup</span>
+      <span class="a2" style="flex:4">3-22 · Holdouts &amp; incrementality</span>
+      <span class="a3" style="flex:4">22-40 · Geo experiments</span>
+      <span class="a4" style="flex:1">40-45 · Wrap</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section class="section" id="intro">
+    <div class="section-kicker">
+      <span class="klabel">Part 0</span>
+      <h2>The channels you cannot split by shopper</h2>
+    </div>
+    <p class="lede">Everything you learned in Sessions 1 to 3 assumed you could flip a coin per person: this shopper sees the new page, that one sees the old. But some of Lumen's most expensive moves cannot be assigned that way. A connected-TV burst reaches whole households. A billboard is seen by a city, not a cookie. Privacy limits mean you can no longer follow individuals across apps and browsers. And a brand campaign lifts everyone at once, so there is no untouched control person left. When the unit of a test cannot be a single user, leaders still need a defensible answer to the only question that matters: would this have happened anyway?</p>
+    <div class="legend">
+      <span class="pill solid">Live - covered in session</span>
+      <span class="pill light">Self-study - read after</span>
+      <span class="pill amber">★ The one big idea</span>
+      <span class="pill inkpill">The case: Lumen Skincare</span>
+    </div>
+    <div class="callout win">
+      <strong>★ What you walk out with today</strong>
+      Three tools and the judgement to pick between them. A <em>holdout</em> deliberately withholds a channel from a slice of the audience so you can measure its true incremental lift. A <em>geo experiment</em> splits by region instead of by person - some markets get the campaign, the rest are the holdout. And <em>incrementality</em> is the one honestly causal number in marketing: the sales that would not have happened without the spend. You will leave able to tell when last-click reporting is flattering a channel, and when to ask for a geo test instead of a dashboard.
+    </div>
+  </section>
+
+  <!-- ============ PART 1: HOLDOUTS & INCREMENTALITY ============ -->
+  <section class="section" id="incrementality">
+    <div class="section-kicker">
+      <span class="klabel">Part 1 · the one big idea</span>
+      <h2>Incrementality is the only causal number in marketing <span class="tag concept">8 min live</span></h2>
+    </div>
+    <p class="lede">Lumen's dashboard says paid search drove $1.2M in revenue. It says so because paid search was the last click before the sale. But most of those shoppers already wanted Lumen - they typed the brand name, clicked the ad sitting on top of the free result, and bought. Would they have bought anyway? Last-click reporting cannot answer that; it hands full credit to whatever touch happened last. The honest question is incremental: how many of those sales would <em>not</em> have happened without the spend. The only way to find out is to withhold the channel from a comparable group and watch the gap - a holdout.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left: reported last-click revenue is a tall bar. Right: true incremental revenue is a shorter bar. The gap between them is budget spent on sales that would have happened anyway.">
+        <style>
+          .inB { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .inL { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .inN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .inAx { stroke: #C7C4DE; stroke-width: 2; }
+          .inBr { stroke: #C7C4DE; stroke-width: 2; fill: none; stroke-dasharray: 5 4; }
+        </style>
+        <text class="inL" x="40" y="34">Reported vs incremental: paid search on Lumen</text>
+        <!-- baseline axis -->
+        <line class="inAx" x1="70" y1="280" x2="840" y2="280"/>
+        <!-- reported bar -->
+        <rect x="130" y="70" width="150" height="210" rx="8" fill="#6B6785"/>
+        <text class="inB" x="150" y="150">Reported</text>
+        <text class="inB" x="150" y="172">(last-click)</text>
+        <text class="inB" x="150" y="210">$1.2M</text>
+        <text class="inN" x="130" y="304">Credited to the last touch before the sale</text>
+        <!-- incremental bar -->
+        <rect x="430" y="200" width="150" height="80" rx="8" fill="#4F46E5"/>
+        <text class="inB" x="450" y="234">True</text>
+        <text class="inB" x="450" y="256">incremental</text>
+        <text class="inL" x="600" y="245" style="fill:#1E1B3A">~$0.4M</text>
+        <text class="inN" x="430" y="304">Sales that would NOT have happened without it</text>
+        <!-- the gap -->
+        <rect class="inBr" x="430" y="70" width="150" height="130" rx="8"/>
+        <rect x="640" y="120" width="180" height="60" rx="10" fill="#DC2626"/>
+        <text class="inB" x="656" y="145">The gap = budget on</text>
+        <text class="inB" x="656" y="165">sales you'd get anyway</text>
+        <line x1="580" y1="135" x2="638" y2="145" stroke="#DC2626" stroke-width="2.5" marker-end="url(#inAh)"/>
+        <defs>
+          <marker id="inAh" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#DC2626" stroke-width="1.6"/></marker>
+        </defs>
+        <!-- note -->
+        <rect x="70" y="330" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="inN" x="92" y="341" style="fill:#1E1B3A">Last-click reporting reliably overstates paid channels shoppers were going to use anyway. Incrementality is what a holdout actually measures.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - reported credit is not incremental lift; the gap is wasted budget</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>What a holdout actually does<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A holdout is a control group for a whole channel. You deliberately withhold the ads from a randomly chosen slice of a comparable audience, run everything else the same, and compare. The difference in sales between the exposed group and the held-out group is the channel's true incremental contribution.</p>
+        <ul>
+          <li><strong>Reported revenue</strong> - what the platform or last-click dashboard credits to the channel. Flattering, and usually too high.</li>
+          <li><strong>Incremental revenue</strong> - the sales that would not have happened without the spend. The only number worth reallocating budget on.</li>
+          <li><strong>The holdout</strong> - the comparable group you withheld the channel from. Your window into "what would have happened anyway", exactly like Session 1's counterfactual.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen holds paid search back from a random slice of its audience for four weeks. Sales in the held-out slice barely move. The lesson lands hard: much of that $1.2M was demand Lumen already had. This is the same trap as Session 1's email story - a channel that looks like a hero because high-intent shoppers pass through it, not because it created the intent.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>The bridge to attribution: MMM needs an experiment to trust it<span class="mini">4 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>If you have taken the sibling <strong>learn-marketing-attribution</strong> course, this session is where the two meet. Attribution models - last-touch, data-driven, and marketing-mix modelling (MMM) - are all correlational. They divide up credit; they do not prove cause. Only incrementality does.</p>
+        <ul>
+          <li><strong>MMM (that course's B8)</strong> reads years of spend and revenue to estimate each channel's contribution. Powerful, but it can drift - it is fitting curves to observational history.</li>
+          <li><strong>Geo-lift and incrementality (that course's B9)</strong> supply the ground truth. A geo experiment gives one honest causal number that the MMM is then calibrated against - the experiment anchors the model so its channel estimates stay believable.</li>
+          <li><strong>The leader takeaway:</strong> when a vendor shows you an MMM, ask "what experiment is this calibrated to?" A model with no experiment behind it is a confident guess.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>One line to remember</strong>
+          Attribution tells you where credit went. Incrementality tells you what your money actually caused. Never reallocate a $4M budget on attribution alone.
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ PART 2: GEO EXPERIMENTS ============ -->
+  <section class="section" id="geo">
+    <div class="section-kicker">
+      <span class="klabel">Part 2 · the leader's tool</span>
+      <h2>Geo experiments: split by region, not by person <span class="tag concept">7 min live</span></h2>
+    </div>
+    <p class="lede">When you cannot flip a coin per shopper, flip it per region. A geo experiment turns whole markets into the units of the test: one set of regions gets the campaign, the rest are held out as the comparison. It is the natural home for exactly the channels a button test cannot reach - CTV, out-of-home, brand bursts - because those reach a place, not a cookie. Lumen's data already carries 9 US regions, which makes it a ready-made geo lab.</p>
+
+    <figure class="zoomable">
+      <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Left: a user-level split flips a coin per shopper. Right: a geo split assigns whole regions on a map, some treated with the campaign and some held out.">
+        <style>
+          .geT { font: 700 13px Inter, sans-serif; fill: #FFFFFF; }
+          .geL { font: 700 13px Inter, sans-serif; fill: #1E1B3A; }
+          .geN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
+          .geR { font: 700 11px Inter, sans-serif; fill: #FFFFFF; }
+        </style>
+        <!-- LEFT: user-level -->
+        <text class="geL" x="30" y="34">User-level split (Sessions 1-3)</text>
+        <circle cx="70" cy="80" r="13" fill="#6366F1"/><circle cx="110" cy="80" r="13" fill="#3730A3"/>
+        <circle cx="150" cy="80" r="13" fill="#3730A3"/><circle cx="190" cy="80" r="13" fill="#6366F1"/>
+        <circle cx="70" cy="120" r="13" fill="#3730A3"/><circle cx="110" cy="120" r="13" fill="#6366F1"/>
+        <circle cx="150" cy="120" r="13" fill="#6366F1"/><circle cx="190" cy="120" r="13" fill="#3730A3"/>
+        <text class="geN" x="30" y="160">One coin flip per shopper. Impossible for a</text>
+        <text class="geN" x="30" y="178">TV spot or billboard - it reaches everyone.</text>
+        <!-- RIGHT: geo split -->
+        <text class="geL" x="480" y="34">Geo-level split (this session)</text>
+        <!-- region grid as a stylized map, 9 regions -->
+        <rect x="480" y="52" width="100" height="66" rx="8" fill="#3730A3"/><text class="geR" x="512" y="90">W-1</text>
+        <rect x="590" y="52" width="100" height="66" rx="8" fill="#A5B4FC"/><text class="geL" x="622" y="90">C-1</text>
+        <rect x="700" y="52" width="100" height="66" rx="8" fill="#3730A3"/><text class="geR" x="732" y="90">E-1</text>
+        <rect x="480" y="128" width="100" height="66" rx="8" fill="#A5B4FC"/><text class="geL" x="512" y="166">W-2</text>
+        <rect x="590" y="128" width="100" height="66" rx="8" fill="#3730A3"/><text class="geR" x="622" y="166">C-2</text>
+        <rect x="700" y="128" width="100" height="66" rx="8" fill="#A5B4FC"/><text class="geL" x="732" y="166">E-2</text>
+        <rect x="480" y="204" width="100" height="66" rx="8" fill="#3730A3"/><text class="geR" x="512" y="242">W-3</text>
+        <rect x="590" y="204" width="100" height="66" rx="8" fill="#A5B4FC"/><text class="geL" x="622" y="242">C-3</text>
+        <rect x="700" y="204" width="100" height="66" rx="8" fill="#3730A3"/><text class="geR" x="732" y="242">E-3</text>
+        <!-- legend -->
+        <rect x="480" y="288" width="16" height="16" rx="4" fill="#3730A3"/><text class="geN" x="502" y="301" style="fill:#1E1B3A">Treated: gets the CTV burst</text>
+        <rect x="660" y="288" width="16" height="16" rx="4" fill="#A5B4FC"/><text class="geN" x="682" y="301" style="fill:#1E1B3A">Held out: the comparison</text>
+        <!-- note -->
+        <rect x="30" y="330" width="14" height="14" rx="3" fill="#84CC16"/>
+        <text class="geN" x="52" y="341" style="fill:#1E1B3A">The 9 held-out and treated regions must look alike before the campaign. The lift in treated markets over held-out ones is the incremental effect.</text>
+      </svg>
+      <figcaption>🔍 Click to zoom - regions become the units; treated markets minus held-out markets is the lift</figcaption>
+    </figure>
+
+    <details class="card" open>
+      <summary><span class="mode live">Live</span>What a geo test can and cannot tell you<span class="mini">3 min</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A geo experiment is powerful, but it is a blunter instrument than a user-level A/B. Knowing its limits is the leader's job.</p>
+        <ul>
+          <li><strong>Can:</strong> give a credible causal read on channels that reach a place, not a person - CTV, radio, out-of-home, a brand campaign. It answers "did the burst lift sales in these markets versus the rest?"</li>
+          <li><strong>Can:</strong> anchor an MMM. One good geo test calibrates the whole model.</li>
+          <li><strong>Cannot:</strong> give you many units. You have 9 regions, not 32,000 shoppers, so a geo test is lower-powered and needs a bigger, longer effect to detect. Small tweaks will not show up.</li>
+          <li><strong>Cannot:</strong> escape the assumption that treated and held-out regions were tracking together before you started. If the West was already booming, the "lift" is contaminated - which is exactly the parallel-trends worry Session 5 unpacks.</li>
+        </ul>
+        <div class="callout example">
+          <span class="ex-pill">Real world</span>
+          <p>Lumen commissions a geo test for a connected-TV burst: 4 of its 9 US regions get the CTV campaign, 5 are held out. Over 8 weeks, treated markets run about 3.6% conversion against 3.2% in the held-out markets - the same 0.4 point gap as the flagship button test, but now proven for a channel no cookie could track. That single number is what the CMO uses to defend the CTV line in the $4M budget.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="mode self">Self-study</span>Which tool for which question<span class="mini">3 min read</span><span class="caret">▶</span></summary>
+      <div class="body">
+        <p>A leader does not run these - you commission the right one. The whole skill is matching the question to the tool:</p>
+        <table class="clean">
+          <thead><tr><th>The situation</th><th>The right tool</th></tr></thead>
+          <tbody>
+            <tr><td>A page or flow change you can serve per shopper</td><td>User-level A/B test (Sessions 1-3)</td></tr>
+            <tr><td>"Is this paid channel actually incremental?"</td><td>Holdout test</td></tr>
+            <tr><td>TV, CTV, radio, out-of-home, a brand burst</td><td>Geo experiment</td></tr>
+            <tr><td>"Where should the whole $4M go?"</td><td>MMM, calibrated by a geo test</td></tr>
+            <tr><td>A change already rolled out to some regions, no clean control</td><td>Quasi-experiment (Session 5)</td></tr>
+          </tbody>
+        </table>
+        <div class="callout tip">
+          <strong>Your leverage is the commission, not the calculation</strong>
+          When someone brings you a brand-campaign result with no holdout and no geo split, the right question is not "what is the ROAS?" It is "what was the comparison group, and would these sales have happened anyway?"
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ HOMEWORK ============ -->
+  <section class="section" id="exercise">
+    <div class="section-kicker">
+      <span class="klabel">Before Session 5</span>
+      <h2>This week <span class="tag exercise">◐ 30 min total</span></h2>
+    </div>
+    <ul>
+      <li><strong>Find your most-credited channel.</strong> Pull the channel your last-click dashboard loves most. Write one sentence on how much of that credit might be demand you already had.</li>
+      <li><strong>Pick a channel you cannot A/B by person.</strong> TV, out-of-home, a sponsorship, a brand push. Sketch a geo split for it: which markets would you treat, which would you hold out, and why they are comparable.</li>
+      <li><strong>Interrogate one incrementality claim.</strong> If a vendor or team has ever told you a channel is "X times ROAS", ask what holdout or geo test that number came from. If the answer is "the platform dashboard", note that it is reported, not incremental.</li>
+      <li><strong>Optional:</strong> if you have taken learn-marketing-attribution, re-read its B8 MMM section with this lens and note where the model would need a geo experiment to be trustworthy.</li>
+    </ul>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="section" id="quiz">
+    <div class="section-kicker">
+      <span class="klabel">Check yourself</span>
+      <h2>Three questions before you go 🎯 <span class="tag exercise">◐ 90 seconds</span></h2>
+    </div>
+    <div class="quiz-q" data-answer="1">
+      <p class="qtext">1 · Your dashboard credits paid search with $1.2M in revenue. Why is that not the amount to reallocate budget on?</p>
+      <button class="qopt" type="button">A · dashboards are always wrong</button>
+      <button class="qopt" type="button">B · that is reported last-click credit, not incremental lift - many of those shoppers would have bought anyway</button>
+      <button class="qopt" type="button">C · $1.2M is too round a number to be real</button>
+      <p class="qwhy">Last-click reporting hands full credit to the final touch. Only a holdout measures incrementality - the sales that would not have happened without the spend, which is usually far lower.</p>
+    </div>
+    <div class="quiz-q" data-answer="2">
+      <p class="qtext">2 · Lumen wants a causal read on a connected-TV burst. Why is a user-level A/B test the wrong tool?</p>
+      <button class="qopt" type="button">A · TV is too expensive to test</button>
+      <button class="qopt" type="button">B · CTV always works, so no test is needed</button>
+      <button class="qopt" type="button">C · a TV burst reaches whole households, so you cannot assign it per shopper - you split by region instead</button>
+      <p class="qwhy">When the treatment reaches a place rather than a cookie, the unit of the test has to be the place. A geo experiment treats some of the 9 regions and holds the rest out.</p>
+    </div>
+    <div class="quiz-q" data-answer="0">
+      <p class="qtext">3 · A vendor presents an MMM saying influencer spend should double. What is the sharpest leader question?</p>
+      <button class="qopt" type="button">A · "What experiment is this model calibrated to?"</button>
+      <button class="qopt" type="button">B · "Can you make the chart bigger?"</button>
+      <button class="qopt" type="button">C · "Is the model written in Python?"</button>
+      <p class="qwhy">MMM is correlational - it fits curves to historical spend and revenue. A geo experiment supplies the one causal number that anchors it. An MMM with no experiment behind it is a confident guess.</p>
+    </div>
+    <p class="quiz-score"></p>
+  </section>
+
+  <!-- ============ OFFICIAL SOURCES ============ -->
+  <section class="section" id="official">
+    <div class="section-kicker">
+      <span class="klabel">Source material</span>
+      <h2>What this session covers</h2>
+    </div>
+    <p class="lede">This leader session distills the causal-marketing toolkit that the builder track and the sibling attribution course build in code. It covers ~80% of the conceptual content; the mechanics live in the sources below.</p>
+    <div class="covered">
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Holdouts and incrementality - the only causal number in marketing</span><span class="note">exec framing - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Last-click overstates paid channels; reported vs incremental</span><span class="note">the gap diagram - Part 1</span></div>
+      <div class="covered-row"><span class="status pill solid">✓</span><span class="name">Geo experiments - split by region, what they can and cannot tell you</span><span class="note">the leader's tool - Part 2</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Meta Marketing Analytics / GeoLift, Google Geo experiments (Vaver-Koehler)</span><span class="note">the platforms named, not operated</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">Geo holdout, donor pool, CausalImpact in Python</span><span class="note">Builder Session 8, and learn-marketing-attribution B9</span></div>
+      <div class="covered-row"><span class="status pill light">◐</span><span class="name">MMM calibration (Meridian / PyMC-Marketing)</span><span class="note">learn-marketing-attribution B8 - anchored by this session's geo test</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section class="cheat" id="cheatsheet">
+    <h3>Leader Session 4 cheat sheet <span>· pin this</span></h3>
+    <div class="grid-2">
+      <div class="cheat-item"><b>Incrementality</b><span>The sales that would NOT have happened without the spend. The only causal number in marketing. Reallocate on this, not on reported credit.</span></div>
+      <div class="cheat-item"><b>Holdout test</b><span>Withhold a channel from a random comparable slice, compare sales. The channel-level version of a control group.</span></div>
+      <div class="cheat-item"><b>Last-click overstates</b><span>Reporting hands full credit to the final touch, so channels shoppers use anyway look like heroes. The gap to incremental is wasted budget.</span></div>
+      <div class="cheat-item"><b>Geo experiment</b><span>Split by region, not by person. Treat some markets, hold the rest out. The home for CTV, TV, out-of-home, brand bursts.</span></div>
+      <div class="cheat-item"><b>Geo limits</b><span>Few units (9 regions), so lower power - only sizable effects show. Assumes treated and held-out markets tracked together before.</span></div>
+      <div class="cheat-item"><b>MMM needs an experiment</b><span>Attribution and MMM are correlational. A geo test supplies the causal anchor. Ask "what experiment is this calibrated to?"</span></div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <span>Leader session 4 of 6 · learn-experimentation-with-phoebe · by Phoebe Fu &nbsp;·&nbsp; 📚 <a href="https://phoebefu6.github.io/learn-with-phoebe/">Learn with Phoebe ↗</a></span>
+    <span><a href="a3-trust-checklist.html">← Prev: The trust checklist</a> &nbsp;·&nbsp; <a href="a5-when-you-cant-randomize.html">Next: When you can't randomize →</a></span>
+  </footer>
+
+</main>
+
+<script src="../assets/app.js?v=1"></script>
+</body>
+</html>
