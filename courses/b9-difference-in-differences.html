@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Builder session 9 · Difference-in-differences - learn experimentation with phoebe</title>
-<link rel="stylesheet" href="../assets/style.css?v=1">
+<link rel="stylesheet" href="../assets/style.css?v=5">
 </head>
 <body>
 
@@ -139,7 +139,7 @@
     <p class="lede">DiD is only causal if <strong>parallel trends</strong> holds: absent the treatment, the treated and control groups would have moved by the same amount over time. This is untestable directly - it is a claim about the missing counterfactual - but you can build confidence by checking that the groups moved in parallel <em>before</em> treatment, using an event study. Scaling from 2x2 to many units and periods, you add unit and time fixed effects: two-way fixed effects (TWFE).</p>
 
     <figure class="zoomable">
-      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An event-study coefficient plot: pre-period coefficients hover near zero with confidence bands, then post-period coefficients rise clearly above zero.">
+      <svg viewBox="0 0 880 352" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An event-study coefficient plot: pre-period coefficients hover near zero with confidence bands, then post-period coefficients rise clearly above zero.">
         <style>
           .esAx { stroke: #C7C4DE; stroke-width: 1.5; }
           .esZero { stroke: #6B6785; stroke-width: 1.5; stroke-dasharray: 5 4; }
@@ -179,9 +179,10 @@
         <text class="esL" x="600" y="60" style="fill:#1A2E05">lags &gt; 0 = effect</text>
         <!-- note squares -->
         <rect x="66" y="284" width="14" height="14" rx="3" fill="#84CC16"/>
-        <text class="esN" x="88" y="295" style="fill:#1E1B3A">Pre-period (lead) coefficients hugging zero is the evidence for parallel trends - it is support, never proof, since the assumption is about the unseen counterfactual.</text>
+        <text class="esN" x="88" y="295" style="fill:#1E1B3A">Pre-period (lead) coefficients hugging zero is the evidence for parallel trends - it</text>
+        <text class="esN" x="88" y="310" style="fill:#1E1B3A">is support, never proof, since the assumption is about the unseen counterfactual.</text>
         <rect x="66" y="308" width="14" height="14" rx="3" fill="#4F46E5"/>
-        <text class="esN" x="88" y="319" style="fill:#1E1B3A">A trend in the leads (points drifting off zero before t=0) is a red flag: the groups were already diverging, so DiD will mislead.</text>
+        <text class="esN" x="88" y="334" style="fill:#1E1B3A">A trend in the leads (points drifting off zero before t=0) is a red flag: the groups were already diverging, so DiD will mislead.</text>
       </svg>
       <figcaption>🔍 Click to zoom - event study: pre-period coefficients near zero, post-period effect above zero with confidence bands</figcaption>
     </figure>
@@ -403,6 +404,6 @@ plt.xlabel("weeks since rollout"); plt.ylabel("coefficient")
 
 </main>
 
-<script src="../assets/app.js?v=1"></script>
+<script src="../assets/app.js?v=5"></script>
 </body>
 </html>

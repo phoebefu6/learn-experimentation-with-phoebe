@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Builder session 10 · Observational causal inference - learn experimentation with phoebe</title>
-<link rel="stylesheet" href="../assets/style.css?v=1">
+<link rel="stylesheet" href="../assets/style.css?v=5">
 </head>
 <body>
 
@@ -104,7 +104,8 @@
         <!-- collider warning -->
         <rect x="30" y="270" width="810" height="42" rx="10" fill="#EEF2FF"/>
         <rect x="46" y="280" width="150" height="24" rx="7" fill="#DC2626"/><text class="dgT" x="58" y="297">⚠ collider / mediator</text>
-        <text class="dgN" x="210" y="297" style="fill:#1E1B3A">A collider (T → C ← Y) or a mediator (T → M → Y) must NOT be conditioned on - doing so OPENS a spurious path and creates bias.</text>
+        <text class="dgN" x="210" y="297" style="fill:#1E1B3A">A collider (T → C ← Y) or a mediator (T → M → Y) must NOT be</text>
+        <text class="dgN" x="210" y="312" style="fill:#1E1B3A">conditioned on - doing so OPENS a spurious path and creates bias.</text>
         <!-- note -->
         <rect x="30" y="326" width="14" height="14" rx="3" fill="#84CC16"/>
         <text class="dgN" x="52" y="337" style="fill:#1E1B3A">The backdoor criterion: block all backdoor paths (arrows into T), condition on no descendants of T. Adjust confounders; leave colliders and mediators alone.</text>
@@ -133,7 +134,7 @@
     <p class="lede">Once the DAG says which confounders X to adjust for, the propensity score gives you a clean way to do it. The propensity is <code>e(X) = P(T=1 | X)</code> - each unit's modelled probability of being treated given its covariates (Rosenbaum &amp; Rubin 1983). Two ways to use it: <strong>matching</strong> (pair treated and control units with similar scores) and <strong>inverse-probability weighting</strong> (IPW - weight each unit by 1/e(X) so the treated and control groups become comparable in aggregate). <strong>Doubly robust</strong> estimators (AIPW, TMLE) combine a propensity model and an outcome model and stay consistent if <em>either</em> one is correct - two shots on goal.</p>
 
     <figure class="zoomable">
-      <svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Before adjustment the treated and control groups have very different covariate distributions; after inverse-probability weighting the two distributions overlap and balance.">
+      <svg viewBox="0 0 880 352" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Before adjustment the treated and control groups have very different covariate distributions; after inverse-probability weighting the two distributions overlap and balance.">
         <style>
           .pwL { font: 700 12px Inter, sans-serif; fill: #1E1B3A; }
           .pwN { font: 600 11px Inter, sans-serif; fill: #6B6785; }
@@ -180,9 +181,10 @@
         <text class="pwN" x="560" y="200" style="fill:#4F46E5">now the difference estimates the effect</text>
         <!-- note squares -->
         <rect x="30" y="272" width="14" height="14" rx="3" fill="#84CC16"/>
-        <text class="pwN" x="52" y="283" style="fill:#1E1B3A">IPW weights each unit by 1/e(X) so treated and control become balanced on the confounders. Check covariate balance (standardized mean differences) after weighting.</text>
+        <text class="pwN" x="52" y="283" style="fill:#1E1B3A">IPW weights each unit by 1/e(X) so treated and control become balanced on the</text>
+        <text class="pwN" x="52" y="298" style="fill:#1E1B3A">confounders. Check covariate balance (standardized mean differences) after weighting.</text>
         <rect x="30" y="296" width="14" height="14" rx="3" fill="#DC2626"/>
-        <text class="pwN" x="52" y="307" style="fill:#1E1B3A">Extreme propensity scores → huge weights → unstable estimates. Trim or clip weights, and check positivity: every unit needs 0 &lt; e(X) &lt; 1.</text>
+        <text class="pwN" x="52" y="322" style="fill:#1E1B3A">Extreme propensity scores → huge weights → unstable estimates. Trim or clip weights, and check positivity: every unit needs 0 &lt; e(X) &lt; 1.</text>
       </svg>
       <figcaption>🔍 Click to zoom - inverse-probability weighting reshapes two imbalanced groups into balance on the confounder</figcaption>
     </figure>
@@ -424,6 +426,6 @@ print(subset)
 
 </main>
 
-<script src="../assets/app.js?v=1"></script>
+<script src="../assets/app.js?v=5"></script>
 </body>
 </html>

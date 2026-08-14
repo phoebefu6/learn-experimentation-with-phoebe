@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Builder session 5 · Multivariate testing - learn experimentation with phoebe</title>
-<link rel="stylesheet" href="../assets/style.css?v=1">
+<link rel="stylesheet" href="../assets/style.css?v=5">
 </head>
 <body>
 
@@ -119,7 +119,8 @@
         <rect x="470" y="272" width="12" height="12" rx="3" fill="#84CC16"/>
         <text class="ffN" x="488" y="282" style="fill:#1E1B3A">4 cells run</text>
         <rect x="580" y="272" width="12" height="12" rx="3" fill="#E7E5F2"/>
-        <text class="ffN" x="598" y="282" style="fill:#1E1B3A">4 cells skipped - their effects alias onto the ones you kept</text>
+        <text class="ffN" x="598" y="282" style="fill:#1E1B3A">4 cells skipped - their effects</text>
+        <text class="ffN" x="598" y="297" style="fill:#1E1B3A">alias onto the ones you kept</text>
         <!-- note -->
         <rect x="18" y="300" width="14" height="14" rx="3" fill="#84CC16"/>
         <text class="ffN" x="40" y="311" style="fill:#1E1B3A">Full = estimate everything, traffic-hungry (2&#7503; cells). Fractional = cheaper, but aliases higher-order interactions with main effects.</text>
@@ -200,7 +201,8 @@
         <circle cx="570" cy="175" r="5" fill="#84CC16"/><circle cx="790" cy="85" r="5" fill="#84CC16"/>
         <text class="ipN" x="796" y="172" style="fill:#4F46E5">hero A</text>
         <text class="ipN" x="796" y="87" style="fill:#1A2E05">hero B</text>
-        <text class="ipN" x="530" y="270" style="fill:#1E1B3A">hero A wins under CTA A, hero B wins under CTA B - the effect flips.</text>
+        <text class="ipN" x="530" y="270" style="fill:#1E1B3A">hero A wins under CTA A, hero B</text>
+        <text class="ipN" x="530" y="285" style="fill:#1E1B3A">wins under CTA B - the effect flips.</text>
       </svg>
       <figcaption>🔍 Click to zoom - parallel lines mean no interaction; crossing lines mean the winning factor flips with the other</figcaption>
     </figure>
@@ -432,6 +434,6 @@ print("aliased?", np.array_equal(C, AB))   # True</pre>
 
 </main>
 
-<script src="../assets/app.js?v=1"></script>
+<script src="../assets/app.js?v=5"></script>
 </body>
 </html>
