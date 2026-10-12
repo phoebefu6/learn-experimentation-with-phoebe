@@ -115,7 +115,7 @@
         <text class="pkL" x="740" y="292">final N (~32k/arm)</text>
         <!-- 0.05 threshold -->
         <line x1="70" y1="248" x2="840" y2="248" stroke="#DC2626" stroke-width="2" stroke-dasharray="7 5"/>
-        <text class="pkD" x="700" y="243">alpha = 0.05</text>
+        <text class="pkD" x="760" y="243">alpha = 0.05</text>
         <!-- benign null paths that stay above -->
         <path class="pkPath" d="M70,120 C180,150 300,110 430,160 560,130 700,175 840,150"/>
         <path class="pkPath" d="M70,90 C180,130 300,170 430,120 560,180 700,140 840,200"/>
@@ -123,13 +123,13 @@
         <!-- two paths that DIP below the line at least once (false alarms) -->
         <path class="pkBad" d="M70,140 C160,180 250,240 320,252 380,240 520,190 620,235 720,170 840,150"/>
         <circle cx="320" cy="252" r="5" fill="#DC2626"/>
-        <text class="pkD" x="300" y="278">false alarm</text>
+        <text class="pkD" x="300" y="292">false alarm</text>
         <path class="pkBad" d="M70,160 C170,200 260,180 380,210 480,255 560,235 680,200 840,170"/>
         <circle cx="480" cy="255" r="5" fill="#DC2626"/>
         <!-- the single valid endpoint -->
         <line x1="740" y1="40" x2="740" y2="270" stroke="#3730A3" stroke-width="1.4" stroke-dasharray="3 4"/>
         <circle cx="740" cy="150" r="6" fill="#3730A3"/>
-        <text class="pkA" x="640" y="118">the ONE valid look</text>
+        <text class="pkA" x="605" y="118">the ONE valid look</text>
         <!-- note squares -->
         <rect x="70" y="306" width="14" height="14" rx="3" fill="#84CC16"/>
         <text class="pkL" x="92" y="317" style="fill:#1E1B3A">Under the null, each path is a random walk. Any single day it is below 0.05 with prob ~5% - but "below on ANY day" compounds fast.</text>
